@@ -38,7 +38,7 @@ export const initialTransactions = [
 
 export const initialStaff = [
   { id: 'ST-001', name: 'Leona De Chavez', email: 'admin@lrc.ph', role: 'Administrator', status: 'Active' },
-  { id: 'ST-002', name: 'Carlo Bautista', email: 'carlo.bautista@nu.edu.ph', role: 'Librarian', status: 'Active' },
+  { id: 'ST-002', name: 'Bench', email: 'carlo.bautista@nu.edu.ph', role: 'Librarian', status: 'Active' },
   { id: 'ST-003', name: 'Patricia Lim', email: 'patricia.lim@nu.edu.ph', role: 'Librarian', status: 'Active' },
 ]
 
