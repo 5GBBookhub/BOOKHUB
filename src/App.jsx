@@ -10,25 +10,22 @@ import {
 import {
   initialBooks, initialBorrowers, initialSettings, initialStaff, initialTransactions,
 } from './data.js'
-import LibrarianDashboard from '../Librarian/Dashboard.jsx'
+import LibrarianDashboard from '../Librarian/pages/LibrarianDesk.jsx'
 import { CoverArt, StatusPill, Avatar, Modal, RecordForm, IssueForm, ConfirmDialog, TransactionTable, ActivityChart, DonutChart } from '../Librarian/components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today, verifyPassword } from '../Librarian/lib/helpers.js'
 import { Dashboard as AdminDashboard } from './pages/AdminDashboard.jsx'
-import { BooksPage } from '../Librarian/pages/BooksPage.jsx'
+import { BooksPage } from '../Librarian/pages/Books.jsx'
 import { BookDetail } from '../Librarian/pages/BookDetail.jsx'
-import { BorrowersPage } from '../Librarian/pages/BorrowersPage.jsx'
-import { CirculationPage } from '../Librarian/pages/CirculationPage.jsx'
-import { ReportsPage } from '../Librarian/pages/ReportsPage.jsx'
-import { StaffPage } from './pages/StaffPage.jsx'
-import { SettingsPage } from './pages/SettingsPage.jsx'
+import { BorrowersPage } from '../Librarian/pages/Borrowers.jsx'
+import { CirculationPage } from '../Librarian/pages/Borrowing.jsx'
+import { ReportsPage } from '../Librarian/pages/Reports.jsx'
+import { StaffPage } from '../Librarian/pages/UsersStaff.jsx'
+import { SettingsPage } from '../Librarian/pages/Settings.jsx'
 import { MemberAccountPage } from './pages/MemberAccountPage.jsx'
 import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
+import { MemberSidebar } from './components/MemberSidebar.jsx'
 
-const memberItems = [
-  { label: 'Book catalog', icon: BookOpen, section: 'books' },
-  { label: 'My account', icon: UserRound, section: 'my-account' },
-]
 const roleOptions = [
   { value: 'admin', label: 'Admin', description: 'Full system access', icon: ShieldCheck },
   { value: 'librarian', label: 'Librarian', description: 'Library operations', icon: BookOpen },
@@ -209,7 +206,7 @@ export default function App() {
       : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} />
         : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
           : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
-            : section === 'circulation' ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} />
+            : section === 'circulation' ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
               : section === 'reports' ? <ReportsPage books={books} transactions={transactions} />
                 : section === 'staff' ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
                   : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
@@ -259,11 +256,7 @@ export default function App() {
         ? <AdminSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
         : session.role === 'librarian'
           ? <LibrarianSidebar session={session} activeNavItem={activeNavItem} overdueCount={overdueCount} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
-          : <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-            <button className="brand" onClick={() => navigate('books')}><span className="brand-mark"><BookOpen size={21} /></span><span className="brand-name">BOOK<span>HUB</span></span></button>
-            <nav className="main-nav" aria-label="Member navigation"><span className="nav-caption">YOUR LIBRARY</span>{memberItems.map(({ label, icon: Icon, section: target }) => <button key={target} className={`nav-item ${section === target ? 'nav-active' : ''}`} onClick={() => navigate(target)}><Icon size={18} /><span>{label}</span></button>)}</nav>
-            <div className="sidebar-bottom"><button className="profile-menu" onClick={logout} title="Sign out"><Avatar name={session.name} /><span><strong>{session.name}</strong><small>{roleOptions.find((item) => item.value === session.role)?.label}</small></span><LogOut size={16} /></button></div>
-          </aside>}
+          : <MemberSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />}
       {sidebarOpen && <button className="mobile-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
       <main className="main-area">
         <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button><div className="breadcrumb"><span>BOOKHUB</span><ChevronRight size={13} /><strong>{headerTitle}</strong></div></div><div className="topbar-actions"><form className="global-search" onSubmit={searchSubmit}><Search size={16} /><input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} /><kbd>⌘ K</kbd></form><button className="icon-button notification-button" aria-label="Notifications" onClick={() => notify(overdueCount ? `You have ${overdueCount} overdue item${overdueCount === 1 ? '' : 's'} to review.` : 'You are all caught up.')}><Bell size={18} />{overdueCount > 0 && <i />}</button><span className="topbar-divider" /><button className="top-avatar" aria-label="Sign out" title="Sign out" onClick={logout}><Avatar name={session.name} /></button></div></header>

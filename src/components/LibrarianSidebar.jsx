@@ -22,7 +22,7 @@ export function LibrarianSidebar({ session, activeNavItem, overdueCount, onNavig
       <nav className="main-nav" aria-label="Librarian navigation">
         <span className="nav-caption">MENU</span>
         {items.map(({ label, icon: Icon, section: target }, index) => {
-          const navItem = index === 1 ? 'librarian-desk' : target
+          const navItem = index === 1 ? 'librarian-desk' : label === 'Returns' ? 'returns' : label === 'Overdue Books' ? 'overdue-books' : target
           return (
           <button key={`${target}-${label}-${index}`} className={`nav-item ${activeNavItem === navItem ? 'nav-active' : ''}`} onClick={() => onNavigate(target, null, navItem)}>
             <Icon size={18} />

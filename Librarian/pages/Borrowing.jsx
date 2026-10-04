@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Download, FileBarChart2, Filter, LibraryBig, MoreHorizontal, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
+import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, Download, FileBarChart2, Filter, LibraryBig, MoreHorizontal, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
 
-export function CirculationPage({ books, setBooks, borrowers, transactions, setTransactions, settings, onToast }) {
-  const [tab, setTab] = useState('All transactions')
+export function CirculationPage({ books, setBooks, borrowers, transactions, setTransactions, settings, onToast, initialTab = 'All transactions' }) {
+  const [tab, setTab] = useState(initialTab)
   const [query, setQuery] = useState('')
   const [issuing, setIssuing] = useState(false)
   const [returning, setReturning] = useState(null)

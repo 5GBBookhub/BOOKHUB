@@ -18,7 +18,7 @@ import {
   initialBooks,
   initialBorrowers,
   initialTransactions,
-} from '../src/data.js'
+} from '../../src/data.js'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const formatDate = (value) => value
