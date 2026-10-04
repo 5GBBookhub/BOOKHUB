@@ -4,8 +4,8 @@ import {
   BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown,
   ChevronLeft, ChevronRight, CircleHelp, Clock3, Download, FileBarChart2,
   Filter, LayoutDashboard, LibraryBig, LogOut, Menu, MoreHorizontal, Plus,
-  Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp,
-  UserRound, UserRoundCog, Users, X,
+  RotateCcw, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2,
+  TrendingUp, UserRound, UserRoundCog, Users, X,
 } from 'lucide-react'
 import {
   initialBooks, initialBorrowers, initialSettings, initialStaff, initialTransactions,
@@ -22,18 +22,9 @@ import { ReportsPage } from '../Librarian/pages/ReportsPage.jsx'
 import { StaffPage } from './pages/StaffPage.jsx'
 import { SettingsPage } from './pages/SettingsPage.jsx'
 import { MemberAccountPage } from './pages/MemberAccountPage.jsx'
+import { AdminSidebar } from './components/AdminSidebar.jsx'
+import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 
-const navItems = [
-  { label: 'Overview', icon: LayoutDashboard, section: 'dashboard' },
-  { label: 'Books', icon: BookOpen, section: 'books' },
-  { label: 'Borrowers', icon: Users, section: 'borrowers' },
-  { label: 'Circulation', icon: BookCopy, section: 'circulation' },
-  { label: 'Reports', icon: FileBarChart2, section: 'reports' },
-]
-const adminItems = [
-  { label: 'Users & staff', icon: UserRoundCog, section: 'staff' },
-  { label: 'Settings', icon: Settings, section: 'settings' },
-]
 const memberItems = [
   { label: 'Book catalog', icon: BookOpen, section: 'books' },
   { label: 'My account', icon: UserRound, section: 'my-account' },
@@ -180,17 +171,17 @@ export default function App() {
     }
   }, [session, staff, setSession])
   const isMember = session?.role === 'student' || session?.role === 'employee'
-  const visibleNavItems = isMember ? memberItems : navItems
-  const visibleAdminItems = session?.role === 'admin' ? adminItems : []
-  const allowedSections = isMember ? ['books', 'my-account'] : session?.role === 'admin' ? [...navItems, ...adminItems].map((item) => item.section) : navItems.map((item) => item.section)
+  const allowedSections = isMember ? ['books', 'my-account'] : ['dashboard', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
   const [section, setSection] = useState(() => session && isMember ? 'books' : 'dashboard')
+  const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'books' : 'dashboard')
   const [selectedBook, setSelectedBook] = useState(null)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
-  const navigate = (target, book = null) => {
+  const navigate = (target, book = null, navItem = target) => {
     if (!allowedSections.includes(target)) return
     setSection(target)
+    setActiveNavItem(navItem)
     setSelectedBook(book)
     setSidebarOpen(false)
   }
@@ -264,11 +255,15 @@ export default function App() {
     if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <button className="brand" onClick={() => navigate(isMember ? 'books' : 'dashboard')}><span className="brand-mark"><BookOpen size={21} /></span><span className="brand-name">BOOK<span>HUB</span><small>NU LIBRARY SYSTEM</small></span></button>
-        <nav className="main-nav" aria-label="Main navigation"><span className="nav-caption">{isMember ? 'YOUR LIBRARY' : 'WORKSPACE'}</span>{visibleNavItems.map(({ label, icon: Icon, section: target }) => <button key={target} className={`nav-item ${section === target ? 'nav-active' : ''}`} onClick={() => navigate(target)}><Icon size={18} /><span>{label}</span>{target === 'circulation' && overdueCount > 0 && <b className="nav-badge">{overdueCount}</b>}</button>)}{visibleAdminItems.length > 0 && <><span className="nav-caption nav-caption-admin">ADMINISTRATION</span>{visibleAdminItems.map(({ label, icon: Icon, section: target }) => <button key={target} className={`nav-item ${section === target ? 'nav-active' : ''}`} onClick={() => navigate(target)}><Icon size={18} /><span>{label}</span></button>)}</>}</nav>
-        <div className="sidebar-bottom"><div className="help-block"><span className="help-icon"><CircleHelp size={17} /></span><strong>Need a hand?</strong><span>Visit the staff help desk.</span><button onClick={() => notify('Please contact the NU library administrator.')}>Get support <ArrowRight size={13} /></button></div><button className="profile-menu" onClick={logout} title="Sign out"><Avatar name={session.name} /><span><strong>{session.name}</strong><small>{roleOptions.find((item) => item.value === session.role)?.label}</small></span><LogOut size={16} /></button></div>
-      </aside>
+      {session.role === 'admin'
+        ? <AdminSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
+        : session.role === 'librarian'
+          ? <LibrarianSidebar session={session} activeNavItem={activeNavItem} overdueCount={overdueCount} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
+          : <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+            <button className="brand" onClick={() => navigate('books')}><span className="brand-mark"><BookOpen size={21} /></span><span className="brand-name">BOOK<span>HUB</span></span></button>
+            <nav className="main-nav" aria-label="Member navigation"><span className="nav-caption">YOUR LIBRARY</span>{memberItems.map(({ label, icon: Icon, section: target }) => <button key={target} className={`nav-item ${section === target ? 'nav-active' : ''}`} onClick={() => navigate(target)}><Icon size={18} /><span>{label}</span></button>)}</nav>
+            <div className="sidebar-bottom"><button className="profile-menu" onClick={logout} title="Sign out"><Avatar name={session.name} /><span><strong>{session.name}</strong><small>{roleOptions.find((item) => item.value === session.role)?.label}</small></span><LogOut size={16} /></button></div>
+          </aside>}
       {sidebarOpen && <button className="mobile-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
       <main className="main-area">
         <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button><div className="breadcrumb"><span>BOOKHUB</span><ChevronRight size={13} /><strong>{headerTitle}</strong></div></div><div className="topbar-actions"><form className="global-search" onSubmit={searchSubmit}><Search size={16} /><input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} /><kbd>⌘ K</kbd></form><button className="icon-button notification-button" aria-label="Notifications" onClick={() => notify(overdueCount ? `You have ${overdueCount} overdue item${overdueCount === 1 ? '' : 's'} to review.` : 'You are all caught up.')}><Bell size={18} />{overdueCount > 0 && <i />}</button><span className="topbar-divider" /><button className="top-avatar" aria-label="Sign out" title="Sign out" onClick={logout}><Avatar name={session.name} /></button></div></header>
