@@ -8,25 +8,25 @@ const items = [
 
 export function MemberSidebar({ session, activeNavItem, onNavigate, onLogout, sidebarOpen }) {
   return (
-    <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-      <button className="brand" onClick={() => onNavigate('books', null, 'books')}>
-        <span className="brand-mark"><BookOpen size={21} /></span>
-        <span className="brand-name">BOOK<span>HUB</span></span>
+    <aside className={`fixed inset-y-0 left-0 z-30 flex w-[246px] flex-col bg-[#111f39] p-[23px_15px_14px] text-[#e2e8f0] transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <button className="mb-4 flex items-center gap-3 rounded-xl bg-transparent p-1 text-left" onClick={() => onNavigate('books', null, 'books')}>
+        <span className="grid h-[45px] w-[45px] place-items-center rounded-[14px] bg-[#64748b] text-white"><BookOpen size={21} /></span>
+        <span className="text-[18px] font-extrabold tracking-tight text-white">BOOK<span className="text-white">HUB</span></span>
       </button>
-      <nav className="main-nav" aria-label="Member sidebar">
-        <span className="nav-caption">YOUR LIBRARY</span>
+      <nav className="flex flex-col gap-1" aria-label="Member sidebar">
+        <span className="px-5 pb-2 text-[10px] font-bold uppercase tracking-[1.15px] text-[#64748b]">YOUR LIBRARY</span>
         {items.map(({ label, icon: Icon, section: target }) => (
-          <button key={target} className={`nav-item ${activeNavItem === target ? 'nav-active' : ''}`} onClick={() => onNavigate(target, null, target)}>
-            <Icon size={18} />
+          <button key={target} className={`flex h-[45px] w-full items-center gap-3 rounded-[14px] px-4 text-left text-sm font-medium transition ${activeNavItem === target ? 'bg-[#64748b] text-white shadow-sm' : 'text-[#e2e8f0] hover:bg-[#f8fafc]/5 hover:text-white'}`} onClick={() => onNavigate(target, null, target)}>
+            <Icon size={18} className={activeNavItem === target ? 'text-white' : 'text-[#e2e8f0]'} />
             <span>{label}</span>
           </button>
         ))}
       </nav>
-      <div className="sidebar-bottom">
-        <button className="profile-menu" onClick={onLogout} title="Sign out">
+      <div className="mt-auto border-t border-white/10 pt-4">
+        <button className="flex w-full items-center gap-3 rounded-xl bg-transparent px-2 py-2 text-left" onClick={onLogout} title="Sign out">
           <Avatar name={session.name} />
-          <span><strong>{session.name}</strong><small>{session.role === 'student' ? 'Student' : 'Employee'}</small></span>
-          <LogOut size={16} />
+          <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-semibold text-white">{session.name}</strong><small className="mt-1 block text-xs text-[#64748b]">{session.role === 'student' ? 'Student' : 'Employee'}</small></span>
+          <LogOut size={16} className="text-[#64748b]" />
         </button>
       </div>
     </aside>

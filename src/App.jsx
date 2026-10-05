@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell,
-  BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown,
-  ChevronLeft, ChevronRight, CircleHelp, Clock3, Download, FileBarChart2,
-  Filter, LayoutDashboard, LibraryBig, LogOut, Menu, MoreHorizontal, Plus,
-  RotateCcw, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2,
-  TrendingUp, UserRound, UserRoundCog, Users, X,
+  Activity, Bell, CheckCircle2, ChevronRight, Menu, Search, X,
 } from 'lucide-react'
 import {
   initialBooks, initialBorrowers, initialSettings, initialStaff, initialTransactions,
@@ -25,13 +20,8 @@ import { MemberAccountPage } from './pages/MemberAccountPage.jsx'
 import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 import { MemberSidebar } from './components/MemberSidebar.jsx'
+import LoginScreen from './components/LoginScreen.jsx'
 
-const roleOptions = [
-  { value: 'admin', label: 'Admin', description: 'Full system access', icon: ShieldCheck },
-  { value: 'librarian', label: 'Librarian', description: 'Library operations', icon: BookOpen },
-  { value: 'student', label: 'Student', description: 'Browse and track loans', icon: UserRound },
-  { value: 'employee', label: 'Employee', description: 'Browse and track loans', icon: Users },
-]
 const titles = {
   dashboard: 'Good morning, Leona', books: 'Book catalog', borrowers: 'Borrowers',
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
@@ -51,96 +41,6 @@ function useStoredState(key, fallback) {
   }, [key, value])
   return [value, setValue]
 }
-
-function LoginScreen({ onLogin, onCreateAccount }) {
-  const [role, setRole] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
-  const [course, setCourse] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [mode, setMode] = useState('login')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const selectedRole = roleOptions.find((item) => item.value === role)
-  const canRegister = role === 'student' || role === 'employee'
-  const submit = async (event) => {
-    event.preventDefault()
-    setError('')
-    if (!role) return setError('Choose an account type to continue.')
-    if (mode === 'signup' && password !== confirmPassword) return setError('The passwords do not match.')
-    setBusy(true)
-    try {
-      if (mode === 'signup') await onCreateAccount({ role, email, password, name, course })
-      else await onLogin(role, email, password)
-    } catch (authError) {
-      setError(authError.message || 'We could not complete that request.')
-    } finally {
-      setBusy(false)
-    }
-  }
-  const chooseRole = (value) => {
-    setRole(value)
-    setError('')
-    if (value === 'admin' && !email) setEmail('admin@lrc.ph')
-    else if (role === 'admin' && email === 'admin@lrc.ph' && value !== 'admin') setEmail('')
-    if (value !== 'student' && value !== 'employee') setMode('login')
-  }
-  return (
-    <main className="login-page">
-      <aside className="login-aside">
-        <button className="login-brand" type="button" onClick={() => setRole('')}><span className="brand-mark"><BookOpen size={21} /></span><span className="brand-name">BOOK<span>HUB</span><small>NU LIBRARY SYSTEM</small></span></button>
-        <div className="login-aside-copy"><span className="eyebrow">NATIONAL UNIVERSITY · LIBRARY</span><h1>A good place to begin.</h1><p>One thoughtful space for the books, people, and ideas that make our campus.</p><div className="login-aside-rule"><span /><span /><span /></div></div>
-        <div className="login-aside-art"><LibraryBig size={180} strokeWidth={0.7} /><span className="art-ring ring-one" /><span className="art-ring ring-two" /><span className="art-gold-line" /></div>
-        <span className="login-aside-footer">KNOWLEDGE IN MOTION · EST. 1900</span>
-      </aside>
-      <section className="login-main">
-        <div className="login-form-wrap">
-          <span className="eyebrow">BOOKHUB ACCOUNT</span>
-          <h2>{mode === 'signup' ? 'Create your account.' : 'Welcome back.'}</h2>
-          <p className="login-description">{mode === 'signup' ? 'Join the library as a student or employee.' : 'Choose your account type to continue.'}</p>
-          <div className="role-grid" role="group" aria-label="Choose account type">
-            {roleOptions.map(({ value, label, description, icon: Icon }) => <button key={value} type="button" className={`role-option ${role === value ? 'role-selected' : ''}`} aria-pressed={role === value} onClick={() => chooseRole(value)}><span className="role-icon"><Icon size={17} /></span><span className="role-copy"><strong>{label}</strong><small>{description}</small></span>{role === value && <CheckCircle2 className="role-check" size={16} />}</button>)}
-          </div>
-          <form className="login-form" onSubmit={submit}>
-            {mode === 'signup' && <><label>Full name<input autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Your full name" /></label><label>{role === 'student' ? 'Course / program' : 'Department'}<input required value={course} onChange={(event) => setCourse(event.target.value)} placeholder={role === 'student' ? 'e.g. BS Information Technology' : 'e.g. Faculty of Computing'} /></label></>}
-            <label>Email address<input type="email" autoComplete="username" required placeholder="name@nu.edu.ph" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-            <label>Password<span className="password-field"><input type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={8} required placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'} value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? 'Hide' : 'Show'}</button></span></label>
-            {mode === 'signup' && <label>Confirm password<input type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} required placeholder="Enter password again" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>}
-            {mode === 'login' && <div className="login-form-meta"><label className="remember-check"><input type="checkbox" />Keep me signed in</label><button type="button" className="text-action" onClick={() => setError('Please contact the library administrator to reset your password.')}>Forgot password?</button></div>}
-            {error && <p className="auth-error" role="alert"><AlertCircle size={15} />{error}</p>}
-            <button className="button button-primary login-submit" disabled={!selectedRole || busy}><span>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : `Sign in as ${selectedRole?.label || '…'}`}</span><ArrowRight size={16} /></button>
-          </form>
-          {canRegister && <p className="signup-switch">{mode === 'signup' ? 'Already have an account?' : 'New to BOOKHUB?'} <button type="button" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError('') }}>{mode === 'signup' ? 'Sign in' : 'Create an account'}</button></p>}
-          <p className="demo-auth-note"><ShieldCheck size={14} />Demo accounts are stored in this browser. Connect a trusted auth service before using real credentials.</p>
-          <div className="login-footnote"><span>© 2026 National University</span><span>Help desk <ArrowUpRight size={12} /></span></div>
-        </div>
-      </section>
-    </main>
-  )
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export default function App() {
   const [books, setBooks] = useStoredState('bookhub.books', initialBooks)
@@ -251,18 +151,78 @@ export default function App() {
     }
     if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
   return (
-    <div className="app-shell">
+    <div className="min-h-screen bg-[#f4f5f2]">
       {session.role === 'admin'
         ? <AdminSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
         : session.role === 'librarian'
           ? <LibrarianSidebar session={session} activeNavItem={activeNavItem} overdueCount={overdueCount} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
           : <MemberSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />}
-      {sidebarOpen && <button className="mobile-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
-      <main className="main-area">
-        <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button><div className="breadcrumb"><span>BOOKHUB</span><ChevronRight size={13} /><strong>{headerTitle}</strong></div></div><div className="topbar-actions"><form className="global-search" onSubmit={searchSubmit}><Search size={16} /><input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} /><kbd>⌘ K</kbd></form><button className="icon-button notification-button" aria-label="Notifications" onClick={() => notify(overdueCount ? `You have ${overdueCount} overdue item${overdueCount === 1 ? '' : 's'} to review.` : 'You are all caught up.')}><Bell size={18} />{overdueCount > 0 && <i />}</button><span className="topbar-divider" /><button className="top-avatar" aria-label="Sign out" title="Sign out" onClick={logout}><Avatar name={session.name} /></button></div></header>
-        <div className="page-content"><div className="content-title-row"><div><h1>{headerTitle}</h1>{section === 'dashboard' && <span className="title-subtitle">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}</div>{section !== 'dashboard' && section !== 'settings' && <span className="title-context"><Activity size={14} />Library operations</span>}</div>{content}<footer className="page-footer"><span>© 2026 National University · BOOKHUB</span><span><span className="footer-live" />All systems operational</span></footer></div>
+      {sidebarOpen && <button className="fixed inset-0 z-20 bg-[#173b63]/40 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
+      <main className="min-h-screen md:ml-[246px]">
+        <header className="flex h-[67px] items-center justify-between border-b border-[#e2e8f0] bg-[#f8fafc]/85 px-6 backdrop-blur-sm md:px-9">
+          <div className="flex items-center gap-3">
+            <button className="inline-grid h-[34px] w-[34px] place-items-center rounded-md border border-transparent text-[#173b63] transition hover:bg-[#e2e8f0] hover:text-[#173b63] md:hidden" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}>
+              <Menu size={19} />
+            </button>
+            <div className="flex items-center gap-2 text-[10px] text-[#64748b]">
+              <span className="font-semibold tracking-[0.45px] text-[#64748b]">BOOKHUB</span>
+              <ChevronRight size={13} className="text-[#64748b]" />
+              <strong className="font-semibold text-[#173b63]">{headerTitle}</strong>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <form className="hidden items-center gap-2 rounded-md border border-[#e2e8f0] bg-[#fbfbfa] px-2.5 py-1.5 text-[#64748b] md:flex md:w-[230px]" onSubmit={searchSubmit}>
+              <Search size={16} />
+              <input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#173b63] placeholder:text-[#64748b] focus:outline-none" />
+              <kbd className="rounded border border-[#e2e8f0] bg-[#f8fafc] px-1.5 py-0.5 text-[8px] text-[#64748b]">⌘ K</kbd>
+            </form>
+            <button className="relative inline-grid h-[34px] w-[34px] place-items-center rounded-md border border-transparent text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" aria-label="Notifications" onClick={() => notify(overdueCount ? `You have ${overdueCount} overdue item${overdueCount === 1 ? '' : 's'} to review.` : 'You are all caught up.') }>
+              <Bell size={18} />
+              {overdueCount > 0 && <i className="absolute right-[7px] top-[7px] h-1.5 w-1.5 rounded-full border border-white bg-[#c86e5f]" />}
+            </button>
+            <span className="h-[26px] w-px bg-[#e2e8f0]" />
+            <button className="grid rounded-full bg-transparent p-0" aria-label="Sign out" title="Sign out" onClick={logout}>
+              <Avatar name={session.name} />
+            </button>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-[1500px] px-6 pb-0 pt-6 md:px-9">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h1 className="m-0 text-[21px] font-bold leading-[1.35] text-[#173b63]">{headerTitle}</h1>
+              {section === 'dashboard' && <span className="mt-1 block text-[10px] text-[#64748b]">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}
+            </div>
+            {section !== 'dashboard' && section !== 'settings' && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] text-[#64748b]">
+                <Activity size={14} />
+                Library operations
+              </span>
+            )}
+          </div>
+
+          {content}
+
+          <footer className="mt-6 flex items-center justify-between gap-3 border-t border-[#e2e8f0] py-4 text-[11px] text-[#64748b]">
+            <span>© 2026 National University · BOOKHUB</span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#4d8a70]" />
+              All systems operational
+            </span>
+          </footer>
+        </div>
       </main>
-      {toast && <div className="toast" role="status"><CheckCircle2 size={17} />{toast}<button onClick={() => setToast('')} aria-label="Dismiss notification"><X size={15} /></button></div>}
+
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-[#d9ebdf] bg-[#f3faf5] px-3 py-2 text-sm font-medium text-[#2f5d4c] shadow-lg" role="status">
+          <CheckCircle2 size={17} />
+          {toast}
+          <button onClick={() => setToast('')} aria-label="Dismiss notification" className="ml-1 text-[#64748b] transition hover:text-[#173b63]">
+            <X size={15} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
