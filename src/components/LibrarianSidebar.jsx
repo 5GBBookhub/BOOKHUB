@@ -3,7 +3,7 @@ import { Avatar } from '../../Librarian/components/LibraryShared.jsx'
 
 const items = [
   { label: 'Dashboard', icon: LayoutDashboard, section: 'dashboard' },
-  { label: 'Librarian Desk', icon: LibraryBig, section: 'dashboard' },
+  { label: 'Librarian Desk', icon: LibraryBig, section: 'librarian-desk' },
   { label: 'Books', icon: BookOpen, section: 'books' },
   { label: 'Borrowers', icon: Users, section: 'borrowers' },
   { label: 'Borrowing', icon: BookCopy, section: 'circulation' },
