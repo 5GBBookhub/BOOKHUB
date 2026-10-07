@@ -16,7 +16,7 @@ import { CirculationPage } from '../Librarian/pages/Borrowing.jsx'
 import { ReportsPage } from '../Librarian/pages/Reports.jsx'
 import { StaffPage } from '../Librarian/pages/UsersStaff.jsx'
 import { SettingsPage } from '../Librarian/pages/Settings.jsx'
-import { MemberAccountPage } from './pages/MemberAccountPage.jsx'
+import { MemberAccountPage } from './pages/MemberDashboard.jsx'
 import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 import { MemberSidebar } from './components/MemberSidebar.jsx'
@@ -25,7 +25,7 @@ import LoginScreen from './components/LoginScreen.jsx'
 const titles = {
   dashboard: 'Good morning, Leona', books: 'Book catalog', borrowers: 'Borrowers',
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
-  settings: 'Settings', 'my-account': 'My account',
+  settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history',
 }
 function useStoredState(key, fallback) {
   const [value, setValue] = useState(() => {
@@ -68,9 +68,9 @@ export default function App() {
     }
   }, [session, staff, setSession])
   const isMember = session?.role === 'student' || session?.role === 'employee'
-  const allowedSections = isMember ? ['books', 'my-account'] : ['dashboard', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
-  const [section, setSection] = useState(() => session && isMember ? 'books' : 'dashboard')
-  const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'books' : 'dashboard')
+  const allowedSections = isMember ? ['dashboard', 'books', 'history'] : ['dashboard', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
+  const [section, setSection] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
+  const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [selectedBook, setSelectedBook] = useState(null)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -102,14 +102,17 @@ export default function App() {
         onIssueBook={() => navigate('circulation')}
         onRecordReturn={() => navigate('circulation')}
       />
-      : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+      : isMember
+        ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+        : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
       : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} />
-        : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
-          : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
-            : section === 'circulation' ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
-              : section === 'reports' ? <ReportsPage books={books} transactions={transactions} />
-                : section === 'staff' ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
-                  : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
+        : section === 'history' ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
+          : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
+            : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
+              : section === 'circulation' ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
+                : section === 'reports' ? <ReportsPage books={books} transactions={transactions} />
+                  : section === 'staff' ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
+                    : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
   const searchSubmit = (event) => { event.preventDefault(); navigate('books') }
     const signIn = async (role, email, password) => {
       const normalized = normalizeEmail(email)
@@ -130,7 +133,7 @@ export default function App() {
       }
       if (!account || !valid) throw new Error('Email or password is incorrect for the selected account type.')
       setSession({ authenticated: true, role, email: normalized, name: account.name || 'Library User' })
-      setSection(role === 'student' || role === 'employee' ? 'books' : 'dashboard')
+      setSection(role === 'student' || role === 'employee' ? 'dashboard' : 'dashboard')
       setSelectedBook(null)
     }
     const createMemberAccount = async ({ role, email, password, name, course }) => {
@@ -146,7 +149,7 @@ export default function App() {
         : { id: `NU-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, name: name.trim(), email: normalized, course: course.trim(), joined: today(), status: 'Active', borrowed: 0, accountType: role, ...credentials }
       setBorrowers((current) => existing ? current.map((item) => item.id === existing.id ? account : item) : [account, ...current])
       setSession({ authenticated: true, role, email: normalized, name: account.name })
-      setSection('books')
+      setSection('dashboard')
       setSelectedBook(null)
     }
     if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
