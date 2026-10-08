@@ -22,7 +22,7 @@ export function MemberAccountPage({ session, borrowers, transactions }) {
     </section>
     <section className="mt-5 rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
       <div className="mb-4 flex items-center justify-between gap-3"><div><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">YOUR ACTIVITY</span><h2 className="mt-1 text-xl font-bold text-[#173b63]">Borrowing history</h2></div><span className="rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">{mine.length} records</span></div>
-      <TransactionTable transactions={mine} />
+      <TransactionTable transactions={mine} showBorrowerColumn={false} />
     </section>
   </>
 }
@@ -101,7 +101,7 @@ MemberAccountPage.MemberHistory = function MemberHistory({ session, borrowers, t
         </div>
         <span className="rounded-full border border-[#e2e8f0] bg-[#f8fafc] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">{mine.length} records</span>
       </div>
-      <TransactionTable transactions={mine} />
+      <TransactionTable transactions={mine} showBorrowerColumn={false} />
     </section>
   )
 }

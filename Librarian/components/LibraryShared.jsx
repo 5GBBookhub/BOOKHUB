@@ -174,16 +174,16 @@ export function ConfirmDialog({ title, message, onConfirm, onClose }) {
   return <Modal title={title} onClose={onClose}><p className="mt-1 text-sm leading-6 text-[#173b63]">{message}</p><div className="mt-5 flex items-center justify-end gap-3"><button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 py-2 text-sm font-semibold text-[#173b63] transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" onClick={onClose}>Cancel</button><button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#bd5a4e] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#a94a3f]" onClick={onConfirm}><Trash2 size={15} />Delete</button></div></Modal>
 }
 
-export function TransactionTable({ transactions, limit, onReturn }) {
+export function TransactionTable({ transactions, limit, onReturn, showBorrowerColumn = true }) {
   const rows = limit ? transactions.slice(0, limit) : transactions
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]"><table className="min-w-full text-left text-sm text-[#173b63]"><thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]"><tr><th className="px-4 py-3">Borrower</th><th className="px-4 py-3">Book title</th><th className="px-4 py-3">Issued</th><th className="px-4 py-3">Due date</th><th className="px-4 py-3">Status</th>{onReturn && <th className="px-4 py-3" />}</tr></thead><tbody>
+    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]"><table className="min-w-full text-left text-sm text-[#173b63]"><thead className="bg-[#f8fafc] text-[11px] font-semibold uppercase tracking-[0.14em] text-[#64748b]"><tr>{showBorrowerColumn && <th className="px-4 py-3">Borrower</th>}<th className="px-4 py-3">Book title</th><th className="px-4 py-3">Issued</th><th className="px-4 py-3">Due date</th><th className="px-4 py-3">Status</th>{onReturn && <th className="px-4 py-3" />}</tr></thead><tbody>
       {rows.map((transaction) => <tr key={transaction.id} className="border-t border-[#e2e8f0] align-middle">
-        <td className="px-4 py-3"><div className="flex items-center gap-3"><Avatar name={transaction.borrower} /><div><strong className="block text-sm font-semibold text-[#173b63]">{transaction.borrower}</strong><span className="text-xs text-[#64748b]">{transaction.id}</span></div></div></td>
+        {showBorrowerColumn && <td className="px-4 py-3"><div className="flex items-center gap-3"><Avatar name={transaction.borrower} /><div><strong className="block text-sm font-semibold text-[#173b63]">{transaction.borrower}</strong><span className="text-xs text-[#64748b]">{transaction.id}</span></div></div></td>}
         <td className="px-4 py-3 text-[#173b63]">{transaction.title}</td><td className="px-4 py-3">{formatDate(transaction.issued)}</td><td className="px-4 py-3">{formatDate(transaction.due)}</td><td className="px-4 py-3"><StatusPill status={transaction.status} /></td>
         {onReturn && <td className="px-4 py-3"><button className="text-sm font-semibold text-[#173b63] hover:text-[#173b63]" onClick={() => onReturn(transaction)}>Return</button></td>}
       </tr>)}
-      {!rows.length && <tr><td colSpan={onReturn ? 6 : 5} className="px-4 py-8 text-center text-sm text-[#64748b]">No transactions match this view.</td></tr>}
+      {!rows.length && <tr><td colSpan={onReturn ? (showBorrowerColumn ? 6 : 5) : (showBorrowerColumn ? 5 : 4)} className="px-4 py-8 text-center text-sm text-[#64748b]">No transactions match this view.</td></tr>}
     </tbody></table></div>
   )
 }

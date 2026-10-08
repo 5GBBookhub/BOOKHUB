@@ -3,7 +3,7 @@ import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, 
 import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
 
-export function BooksPage({ books, setBooks, onToast, onOpenBook, initialQuery = '', readOnly = false }) {
+export function BooksPage({ books, setBooks, onToast, onOpenBook, initialQuery = '', readOnly = false, onBorrowBook, memberBorrowedBookIds = [] }) {
   const [query, setQuery] = useState(initialQuery)
   const [category, setCategory] = useState('All categories')
   const [availability, setAvailability] = useState('Any availability')
@@ -11,6 +11,7 @@ export function BooksPage({ books, setBooks, onToast, onOpenBook, initialQuery =
   const [page, setPage] = useState(1)
   const [modal, setModal] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [borrowModal, setBorrowModal] = useState(null)
   const pageSize = 8
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase()
@@ -45,12 +46,85 @@ export function BooksPage({ books, setBooks, onToast, onOpenBook, initialQuery =
             <label className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-sm text-[#64748b]"><SlidersHorizontal size={15} /><select className="bg-transparent pr-5 text-[#173b63] outline-none" value={sort} onChange={(event) => setSort(event.target.value)}><option>Recently added</option><option>Title A–Z</option><option>Most borrowed</option></select><ChevronDown size={14} /></label>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{visible.map((book) => <article className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]/70 p-3 transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" key={book.id}><button className="block w-full text-left" onClick={() => onOpenBook(book)}><CoverArt book={book} /></button><div className="mt-3"><span className="inline-flex rounded-full bg-[#e2e8f0] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#173b63]">{book.category}</span><button className="mt-2 block text-left text-lg font-bold text-[#173b63] transition hover:text-[#173b63]" onClick={() => onOpenBook(book)}>{book.title}</button><p className="mt-1 text-sm text-[#173b63]">{book.author}</p><div className="mt-3 flex items-center justify-between gap-2"><span className={`inline-flex items-center gap-2 rounded-full px-2 py-1 text-[10px] font-semibold ${book.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}><i className="h-1.5 w-1.5 rounded-full bg-current" />{book.available ? `${book.available} of ${book.copies} available` : 'All copies borrowed'}</span><button className="inline-grid h-8 w-8 place-items-center rounded-md text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" aria-label={`Edit ${book.title}`} onClick={() => setModal({ kind: 'book', record: book })}><MoreHorizontal size={17} /></button></div><div className="mt-3 flex items-center gap-2 border-t border-[#e2e8f0] pt-3 text-sm"><button className="font-semibold text-[#173b63] hover:text-[#173b63]" onClick={() => setModal({ kind: 'book', record: book })}>Edit</button><button className="font-semibold text-red-600 hover:text-red-700" onClick={() => setDeleting(book)}>Delete</button></div></div></article>)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{visible.map((book) => {
+          const isBorrowedAlready = memberBorrowedBookIds.includes(book.id)
+          return (
+            <article className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]/70 p-3 transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" key={book.id}>
+              <button className="block w-full text-left" onClick={() => onOpenBook(book)}><CoverArt book={book} /></button>
+              <div className="mt-3"><span className="inline-flex rounded-full bg-[#e2e8f0] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#173b63]">{book.category}</span><button className="mt-2 block text-left text-lg font-bold text-[#173b63] transition hover:text-[#173b63]" onClick={() => onOpenBook(book)}>{book.title}</button><p className="mt-1 text-sm text-[#173b63]">{book.author}</p><div className="mt-3 flex items-center justify-between gap-2"><span className={`inline-flex items-center gap-2 rounded-full px-2 py-1 text-[10px] font-semibold ${book.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}><i className="h-1.5 w-1.5 rounded-full bg-current" />{book.available ? `${book.available} of ${book.copies} available` : 'All copies borrowed'}</span>{!readOnly && <button className="inline-grid h-8 w-8 place-items-center rounded-md text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" aria-label={`Edit ${book.title}`} onClick={() => setModal({ kind: 'book', record: book })}><MoreHorizontal size={17} /></button>}</div>{readOnly ? <div className="mt-3 border-t border-[#e2e8f0] pt-3"><button className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold shadow-sm transition ${isBorrowedAlready ? 'cursor-not-allowed bg-[#e2e8f0] text-[#64748b]' : 'bg-[#173b63] text-white hover:bg-[#173b63]'}`} disabled={isBorrowedAlready} onClick={() => !isBorrowedAlready && setBorrowModal(book)}>{isBorrowedAlready ? 'Borrowed' : 'Borrow'}</button></div> : <div className="mt-3 flex items-center gap-2 border-t border-[#e2e8f0] pt-3 text-sm"><button className="font-semibold text-[#173b63] hover:text-[#173b63]" onClick={() => setModal({ kind: 'book', record: book })}>Edit</button><button className="font-semibold text-red-600 hover:text-red-700" onClick={() => setDeleting(book)}>Delete</button></div>}</div></article>
+          )
+        })}</div>
         {!visible.length && <div className="mt-5 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#94a3b8] bg-[#f8fafc] px-4 py-10 text-center text-[#64748b]"><Search size={24} /><strong className="text-lg font-semibold text-[#173b63]">No books found</strong><span>Try adjusting your search or filters.</span></div>}
         <div className="mt-5 flex flex-col gap-3 border-t border-[#e2e8f0] pt-4 sm:flex-row sm:items-center sm:justify-between"><span className="text-sm text-[#173b63]">Showing <strong className="text-[#173b63]">{filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)}</strong> of <strong className="text-[#173b63]">{filtered.length}</strong> titles</span><div className="flex items-center gap-2"><button className="inline-grid h-9 w-9 place-items-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50" disabled={page === 1} aria-label="Previous page" onClick={() => setPage((current) => current - 1)}><ChevronLeft size={17} /></button><span className="text-sm font-semibold text-[#173b63]">{page} / {pages}</span><button className="inline-grid h-9 w-9 place-items-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50" disabled={page === pages} aria-label="Next page" onClick={() => setPage((current) => current + 1)}><ChevronRight size={17} /></button></div></div>
       </section>
       {modal && <RecordForm kind={modal.kind} record={modal.record} onSave={saveBook} onClose={() => setModal(null)} />}
+      {borrowModal && (
+        <BorrowDateModal
+          book={borrowModal}
+          onClose={() => setBorrowModal(null)}
+          onSubmit={(borrowDate, returnDate) => {
+            if (onBorrowBook) onBorrowBook(borrowModal, borrowDate, returnDate)
+            setBorrowModal(null)
+          }}
+        />
+      )}
       {deleting && <ConfirmDialog title="Remove this book?" message={`“${deleting.title}” will be removed from the catalog. This action cannot be undone.`} onClose={() => setDeleting(null)} onConfirm={() => { setBooks((current) => current.filter((book) => book.id !== deleting.id)); setDeleting(null); onToast('Book removed from the catalog') }} />}
     </>
+  )
+}
+
+function BorrowDateModal({ book, onClose, onSubmit }) {
+  const [borrowDate, setBorrowDate] = useState(today())
+  const [returnDate, setReturnDate] = useState(() => {
+    const date = new Date(today())
+    date.setDate(date.getDate() + 14)
+    return date.toISOString().slice(0, 10)
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#173b63]/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="w-full max-w-[440px] rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.22)]" role="dialog" aria-modal="true" aria-label="Borrow book">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-[#173b63]">Borrow {book.title}</h2>
+            <p className="mt-1 text-sm text-[#64748b]">Select your borrowing dates.</p>
+          </div>
+          <button className="inline-grid h-9 w-9 place-items-center rounded-md text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" onClick={onClose} aria-label="Close dialog">×</button>
+        </div>
+
+        <form className="grid gap-4" onSubmit={(event) => {
+          event.preventDefault()
+          onSubmit(borrowDate, returnDate)
+        }}>
+          <label className="text-sm font-medium text-[#173b63]">
+            Borrow date
+            <input
+              type="date"
+              required
+              value={borrowDate}
+              onChange={(event) => setBorrowDate(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10"
+            />
+          </label>
+
+          <label className="text-sm font-medium text-[#173b63]">
+            Return date
+            <input
+              type="date"
+              required
+              value={returnDate}
+              min={borrowDate}
+              onChange={(event) => setReturnDate(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10"
+            />
+          </label>
+
+          <div className="mt-2 flex items-center justify-end gap-3 border-t border-[#e2e8f0] pt-4">
+            <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 py-2 text-sm font-semibold text-[#173b63] transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" onClick={onClose}>Cancel</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#173b63] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#173b63]">Confirm borrow</button>
+          </div>
+        </form>
+      </section>
+    </div>
   )
 }

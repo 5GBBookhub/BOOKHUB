@@ -105,7 +105,37 @@ export default function App() {
       : isMember
         ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
         : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
-      : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} />
+      : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && item.status !== 'Returned').map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
+          if (!session || !memberRecord) {
+            notify('You need an active member profile to borrow a book.')
+            return
+          }
+          const alreadyBorrowed = transactions.some((item) => item.borrowerId === memberRecord.id && item.bookId === book.id && item.status !== 'Returned')
+          if (alreadyBorrowed) {
+            notify('You already borrowed this book. You can only borrow each book once at a time.')
+            return
+          }
+          const available = books.find((item) => item.id === book.id)?.available ?? 0
+          if (available <= 0) {
+            notify('This book is currently unavailable.')
+            return
+          }
+          const nextId = `TRX-${String(Date.now()).slice(-4)}`
+          const entry = {
+            id: nextId,
+            borrowerId: memberRecord.id,
+            borrower: memberRecord.name,
+            bookId: book.id,
+            title: book.title,
+            issued: borrowDate,
+            due: returnDate,
+            status: 'Borrowed',
+            fine: 0,
+          }
+          setTransactions((current) => [entry, ...current])
+          setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
+          notify(`Borrowed “${book.title}” for ${memberRecord.name}`)
+        }} />
         : section === 'history' ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
           : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
             : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
