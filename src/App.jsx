@@ -93,28 +93,67 @@ export default function App() {
   const overdueCount = visibleLoans.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0).length
   const content = selectedBook && section === 'books'
     ? <BookDetail book={books.find((item) => item.id === selectedBook.id) || selectedBook} onBack={() => setSelectedBook(null)} onSaveBook={(updated) => { setBooks((current) => current.map((item) => item.id === updated.id ? updated : item)); notify('Book details updated') }} transactions={isMember ? transactions.filter((item) => item.borrowerId === memberRecord?.id) : transactions} canEdit={!isMember} />
-    : section === 'dashboard' ? session?.role === 'librarian'
-      ? <LibrarianDashboard
-      userName={session.name || 'Bench'}
-      books={books}
-      borrowers={borrowers}
-      transactions={transactions}
-      onNavigate={navigate}
-      onIssueBook={() => navigate('circulation')}
-      onRecordReturn={() => navigate('circulation')}
-    />
-    : isMember
-      ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
-      : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
-    : section === 'librarian-desk' ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} />
-    : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} />
-        : section === 'history' ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
-          : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
-            : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
-              : section === 'circulation' ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
-                : section === 'reports' ? <ReportsPage books={books} transactions={transactions} />
-                  : section === 'staff' ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
-                    : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
+    : section === 'dashboard'
+      ? session?.role === 'librarian'
+        ? <LibrarianDashboard
+            userName={session.name || 'Bench'}
+            books={books}
+            borrowers={borrowers}
+            transactions={transactions}
+            onNavigate={navigate}
+            onIssueBook={() => navigate('circulation')}
+            onRecordReturn={() => navigate('circulation')}
+          />
+        : isMember
+          ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+          : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+      : section === 'librarian-desk'
+        ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} />
+        : section === 'books'
+          ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && item.status !== 'Returned').map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
+              if (!session || !memberRecord) {
+                notify('You need an active member profile to borrow a book.')
+                return
+              }
+              const alreadyBorrowed = transactions.some((item) => item.borrowerId === memberRecord.id && item.bookId === book.id && item.status !== 'Returned')
+              if (alreadyBorrowed) {
+                notify('You already borrowed this book. You can only borrow each book once at a time.')
+                return
+              }
+              const available = books.find((item) => item.id === book.id)?.available ?? 0
+              if (available <= 0) {
+                notify('This book is currently unavailable.')
+                return
+              }
+              const nextId = `TRX-${String(Date.now()).slice(-4)}`
+              const entry = {
+                id: nextId,
+                borrowerId: memberRecord.id,
+                borrower: memberRecord.name,
+                bookId: book.id,
+                title: book.title,
+                issued: borrowDate,
+                due: returnDate,
+                status: 'Borrowed',
+                fine: 0,
+              }
+              setTransactions((current) => [entry, ...current])
+              setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
+              notify(`Borrowed “${book.title}” for ${memberRecord.name}`)
+            }} />
+          : section === 'history'
+            ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
+            : section === 'my-account'
+              ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
+              : section === 'borrowers'
+                ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
+                : section === 'circulation'
+                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
+                  : section === 'reports'
+                    ? <ReportsPage books={books} transactions={transactions} />
+                    : section === 'staff'
+                      ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
+                      : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
   const searchSubmit = (event) => { event.preventDefault(); navigate('books') }
     const signIn = async (role, email, password) => {
       const normalized = normalizeEmail(email)
