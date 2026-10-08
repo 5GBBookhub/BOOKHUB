@@ -1,9 +1,9 @@
-import { BookCopy, BookOpen, Clock3, FileBarChart2, LayoutDashboard, LibraryBig, LogOut, RotateCcw, Settings, UserRoundCog, Users } from 'lucide-react'
+import { BookCopy, BookOpen, Clock3, FileBarChart2, LayoutDashboard, LibraryBig, LogOut, RotateCcw, Users } from 'lucide-react'
 import { Avatar } from '../../Librarian/components/LibraryShared.jsx'
 
 const items = [
   { label: 'Dashboard', icon: LayoutDashboard, section: 'dashboard' },
-  { label: 'Librarian Desk', icon: LibraryBig, section: 'dashboard' },
+  { label: 'Librarian Desk', icon: LibraryBig, section: 'librarian-desk' },
   { label: 'Books', icon: BookOpen, section: 'books' },
   { label: 'Borrowers', icon: Users, section: 'borrowers' },
   { label: 'Borrowing', icon: BookCopy, section: 'circulation' },
@@ -31,9 +31,6 @@ export function LibrarianSidebar({ session, activeNavItem, overdueCount, onNavig
             </button>
           )
         })}
-        <span className="mt-5 px-5 pb-2 text-[10px] font-bold uppercase tracking-[1.15px] text-[#64748b]">ADMINISTRATION</span>
-        <button className={`flex h-[45px] w-full items-center gap-3 rounded-[14px] px-4 text-left text-sm font-medium transition ${activeNavItem === 'staff' ? 'bg-[#64748b] text-white shadow-sm' : 'text-[#e2e8f0] hover:bg-[#f8fafc]/5 hover:text-white'}`} onClick={() => onNavigate('staff', null, 'staff')}><UserRoundCog size={18} className={activeNavItem === 'staff' ? 'text-white' : 'text-[#e2e8f0]'} /><span>Users / Staff</span></button>
-        <button className={`flex h-[45px] w-full items-center gap-3 rounded-[14px] px-4 text-left text-sm font-medium transition ${activeNavItem === 'settings' ? 'bg-[#64748b] text-white shadow-sm' : 'text-[#e2e8f0] hover:bg-[#f8fafc]/5 hover:text-white'}`} onClick={() => onNavigate('settings', null, 'settings')}><Settings size={18} className={activeNavItem === 'settings' ? 'text-white' : 'text-[#e2e8f0]'} /><span>Settings</span></button>
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
         <button className="flex w-full items-center gap-3 rounded-xl bg-transparent px-2 py-2 text-left" onClick={onLogout} title="Sign out">
