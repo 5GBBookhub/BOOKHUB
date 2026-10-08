@@ -1,7 +1,47 @@
 import { useMemo, useState } from 'react'
-import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Download, FileBarChart2, Filter, LibraryBig, MoreHorizontal, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
-import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
+import { Download } from 'lucide-react'
+import { StatusPill } from '../components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
+
+function TransactionDistribution({ transactions }) {
+  const statuses = [
+    ['Borrowed', '#173b63'],
+    ['Returned', '#94a3b8'],
+    ['Overdue', '#d77c65'],
+  ].map(([name, color]) => ({ name, color, count: transactions.filter((item) => item.status === name).length }))
+  const total = statuses.reduce((sum, item) => sum + item.count, 0) || 1
+  const radius = 52
+  const circumference = 2 * Math.PI * radius
+  let offset = 0
+
+  return (
+    <div className="grid items-center gap-8 md:grid-cols-[130px_minmax(180px,1fr)_190px]">
+      <div className="relative mx-auto h-[112px] w-[112px]">
+        <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120" role="img" aria-label="Transaction distribution chart">
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="20" />
+          {statuses.map((item) => {
+            const length = (item.count / total) * circumference
+            const segment = <circle key={item.name} cx="60" cy="60" r={radius} fill="none" stroke={item.color} strokeWidth="20" strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offset} />
+            offset += length
+            return segment
+          })}
+        </svg>
+        <div className="absolute inset-[26px] grid place-items-center rounded-full bg-[#f8fafc] text-center">
+          <strong className="text-[24px] leading-none text-[#173b63]">{transactions.length}</strong>
+          <span className="mt-1 text-[9px] uppercase tracking-[0.14em] text-[#64748b]">records</span>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {statuses.map((item) => <div key={item.name} className="flex items-center justify-between gap-5 text-base text-[#173b63]"><span className="flex items-center gap-3"><i className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><strong className="font-semibold">{item.count}</strong></div>)}
+      </div>
+      <div className="text-center md:text-left">
+        <strong className="block text-[36px] font-bold leading-none tracking-tight text-[#173b63]">{transactions.length}</strong>
+        <span className="mt-3 block text-lg text-[#173b63]">transactions recorded</span>
+        <small className="mt-3 block text-sm leading-5 text-[#64748b]">Includes all current demo records.</small>
+      </div>
+    </div>
+  )
+}
 
 export function ReportsPage({ books, transactions }) {
   const topBooks = [...books].sort((a, b) => b.borrowed - a.borrowed).slice(0, 6)
@@ -22,16 +62,9 @@ export function ReportsPage({ books, transactions }) {
         <div className="mb-4"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">COLLECTION MIX</span><h2 className="mt-1 text-xl font-bold text-[#173b63]">By category</h2></div>
         <div className="space-y-3">{categories.map((item, index) => <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 text-sm text-[#173b63]" key={item.name}><span className={`h-2.5 w-2.5 rounded-full ${index === 0 ? 'bg-[#173b63]' : index === 1 ? 'bg-[#94a3b8]' : index === 2 ? 'bg-[#d77c65]' : 'bg-[#2d5b52]'}`} /> <span>{item.name}</span><strong>{item.count}</strong><span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#64748b]">{Math.round((item.count / books.length) * 100)}%</span></div>)}</div>
       </section>
-      <section className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+      <section className="rounded-[22px] border border-[#dce4ec] bg-[#f8fafc] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] md:p-6">
         <div className="mb-4"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">CIRCULATION SNAPSHOT</span><h2 className="mt-1 text-xl font-bold text-[#173b63]">Transaction distribution</h2></div>
-        <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between">
-          <DonutChart transactions={transactions} />
-          <div className="rounded-xl bg-[#f8fafc] p-4 text-center md:w-[180px]">
-            <strong className="block text-3xl font-black tracking-tight text-[#173b63]">{transactions.length}</strong>
-            <span className="mt-1 block text-sm text-[#173b63]">transactions recorded</span>
-            <small className="mt-2 block text-xs text-[#64748b]">Includes all current demo records.</small>
-          </div>
-        </div>
+        <TransactionDistribution transactions={transactions} />
       </section>
       <section className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
         <div className="mb-4"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">INVENTORY HEALTH</span><h2 className="mt-1 text-xl font-bold text-[#173b63]">Availability by copies</h2></div>

@@ -5,7 +5,8 @@ import {
 import {
   initialBooks, initialBorrowers, initialSettings, initialStaff, initialTransactions,
 } from './data.js'
-import LibrarianDashboard from '../Librarian/pages/LibrarianDesk.jsx'
+import LibrarianDashboard from '../Librarian/pages/Dashboard.jsx'
+import LibrarianDesk from '../Librarian/pages/LibrarianDesk.jsx'
 import { CoverArt, StatusPill, Avatar, Modal, RecordForm, IssueForm, ConfirmDialog, TransactionTable, ActivityChart, DonutChart } from '../Librarian/components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today, verifyPassword } from '../Librarian/lib/helpers.js'
 import { Dashboard as AdminDashboard } from './pages/AdminDashboard.jsx'
@@ -23,7 +24,7 @@ import { MemberSidebar } from './components/MemberSidebar.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
 
 const titles = {
-  dashboard: 'Good morning, Leona', books: 'Book catalog', borrowers: 'Borrowers',
+  dashboard: 'Good morning, Leona', 'librarian-desk': 'Librarian Desk', books: 'Book catalog', borrowers: 'Borrowers',
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
   settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history',
 }
@@ -68,7 +69,7 @@ export default function App() {
     }
   }, [session, staff, setSession])
   const isMember = session?.role === 'student' || session?.role === 'employee'
-  const allowedSections = isMember ? ['dashboard', 'books', 'history'] : ['dashboard', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
+  const allowedSections = isMember ? ['dashboard', 'books', 'history'] : ['dashboard', 'librarian-desk', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
   const [section, setSection] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [selectedBook, setSelectedBook] = useState(null)
@@ -85,7 +86,7 @@ export default function App() {
   const notify = (message) => { setToast(message); window.clearTimeout(window.__bookhubToast); window.__bookhubToast = window.setTimeout(() => setToast(''), 2800) }
   const openBook = (book) => navigate('books', book)
   const logout = () => { setSession(null); setSection('dashboard'); setSelectedBook(null); setGlobalSearch(''); setSidebarOpen(false) }
-  const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' && session ? `Good morning, ${session.name.split(' ')[0]}` : titles[section]
+  const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' ? 'Dashboard' : titles[section]
   const activeLoans = transactions.filter((item) => item.status !== 'Returned')
   const memberRecord = isMember ? borrowers.find((item) => item.email.toLowerCase() === session.email.toLowerCase()) : null
   const visibleLoans = isMember ? activeLoans.filter((item) => item.borrowerId === memberRecord?.id) : activeLoans
@@ -94,6 +95,7 @@ export default function App() {
     ? <BookDetail book={books.find((item) => item.id === selectedBook.id) || selectedBook} onBack={() => setSelectedBook(null)} onSaveBook={(updated) => { setBooks((current) => current.map((item) => item.id === updated.id ? updated : item)); notify('Book details updated') }} transactions={isMember ? transactions.filter((item) => item.borrowerId === memberRecord?.id) : transactions} canEdit={!isMember} />
     : section === 'dashboard' ? session?.role === 'librarian'
       ? <LibrarianDashboard
+<<<<<<< HEAD
         userName={session.name || 'Bench'}
         books={books}
         borrowers={borrowers}
@@ -136,6 +138,21 @@ export default function App() {
           setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
           notify(`Borrowed “${book.title}” for ${memberRecord.name}`)
         }} />
+=======
+      userName={session.name || 'Bench'}
+      books={books}
+      borrowers={borrowers}
+      transactions={transactions}
+      onNavigate={navigate}
+      onIssueBook={() => navigate('circulation')}
+      onRecordReturn={() => navigate('circulation')}
+    />
+    : isMember
+      ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+      : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
+    : section === 'librarian-desk' ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} />
+    : section === 'books' ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} />
+>>>>>>> 8912d413012d0d7412ee7517130834023e672a4c
         : section === 'history' ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
           : section === 'my-account' ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
             : section === 'borrowers' ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
