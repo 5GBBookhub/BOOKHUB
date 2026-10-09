@@ -39,7 +39,7 @@ MemberAccountPage.MemberDashboard = function MemberDashboard({ session, borrower
 
   return (
     <>
-      <div className="mb-6 rounded-[26px] border border-[#e2e8f0] bg-gradient-to-r from-[#173b63] via-[#173b63] to-[#64748b] p-5 text-white shadow-[0_18px_38px_rgba(23,59,99,0.2)] md:flex md:items-center md:justify-between">
+      <div className="mb-6 rounded-[26px] border border-[#e2e8f0] bg-[#684a37] p-5 text-white shadow-[0_18px_38px_rgba(104,74,55,0.2)] md:flex md:items-center md:justify-between">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">DAILY LIBRARY SUMMARY</span>
           <h1 className="mt-2 text-3xl font-black tracking-tight">Your library, in good order.</h1>
@@ -67,7 +67,7 @@ MemberAccountPage.MemberDashboard = function MemberDashboard({ session, borrower
           {recent.map((item) => (
             <div key={item.id} className="rounded-[18px] border border-[#e2e8f0] bg-white p-3 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${item.status === 'Returned' ? 'bg-emerald-50 text-emerald-700' : item.status === 'Overdue' ? 'bg-rose-50 text-rose-700' : 'bg-sky-50 text-sky-700'}`}>
+                <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${item.status === 'Returned' ? 'bg-emerald-50 text-emerald-700' : item.status === 'Overdue' ? 'bg-rose-50 text-rose-700' : 'bg-[#e8d8c8] text-[#684a37]'}`}>
                   {item.status}
                 </span>
                 <span className="text-[10px] text-[#64748b]">{item.due}</span>
@@ -108,7 +108,7 @@ MemberAccountPage.MemberHistory = function MemberHistory({ session, borrowers, t
 
 function StatCard({ label, value, detail, icon: Icon, color, onClick, alert }) {
   const tones = {
-    blue: 'bg-sky-100 text-[#64748b]',
+    blue: 'bg-[#e8d8c8] text-[#684a37]',
     gold: 'bg-amber-100 text-amber-700',
     green: 'bg-emerald-100 text-emerald-700',
     coral: 'bg-rose-100 text-rose-700',

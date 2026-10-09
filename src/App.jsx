@@ -28,18 +28,32 @@ const titles = {
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
   settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history',
 }
-function useStoredState(key, fallback) {
+function useStoredState(key, fallback, sessionOnly = false) {
+  const storage = sessionOnly ? window.sessionStorage : window.localStorage
   const [value, setValue] = useState(() => {
     try {
-      const stored = localStorage.getItem(key)
+      const stored = storage.getItem(key)
       return stored ? JSON.parse(stored) : fallback
     } catch {
       return fallback
     }
   })
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value))
-  }, [key, value])
+    storage.setItem(key, JSON.stringify(value))
+  }, [key, storage, value])
+  useEffect(() => {
+    if (sessionOnly) return undefined
+    const syncFromOtherTab = (event) => {
+      if (event.key !== key) return
+      try {
+        setValue(event.newValue ? JSON.parse(event.newValue) : fallback)
+      } catch {
+        setValue(fallback)
+      }
+    }
+    window.addEventListener('storage', syncFromOtherTab)
+    return () => window.removeEventListener('storage', syncFromOtherTab)
+  }, [fallback, key, sessionOnly])
   return [value, setValue]
 }
 
@@ -47,20 +61,21 @@ export default function App() {
   const [books, setBooks] = useStoredState('bookhub.books', initialBooks)
   const [borrowers, setBorrowers] = useStoredState('bookhub.borrowers', initialBorrowers)
   const [transactions, setTransactions] = useStoredState('bookhub.transactions', initialTransactions)
+  const [activityNotifications, setActivityNotifications] = useStoredState('bookhub.activityNotifications', [])
   const [staff, setStaff] = useStoredState('bookhub.staff', initialStaff)
   const [settings, setSettings] = useStoredState('bookhub.settings', initialSettings)
   useEffect(() => {
     setStaff((current) => current.map((member) => {
-      if (member.id === 'ST-001' && member.email === 'leona.dechavez@nu.edu.ph') {
+      if (member.id === 'ST-001' && member.email === 'leona.dechavez@lib.ph') {
         return { ...member, email: 'admin@lrc.ph' }
       }
-      if (member.id === 'ST-002' && member.email === 'carlo.bautista@nu.edu.ph') {
+      if (member.id === 'ST-002' && member.email === 'carlo.bautista@lib.ph') {
         return { ...member, name: 'Bench' }
       }
       return member
     }))
   }, [setStaff])
-  const [session, setSession] = useStoredState('bookhub.session', null)
+  const [session, setSession] = useStoredState('bookhub.session', null, true)
   useEffect(() => {
     if (!session?.authenticated || session.role !== 'librarian') return
     const account = staff.find((member) => normalizeEmail(member.email) === normalizeEmail(session.email) && member.role === 'Librarian')
@@ -76,6 +91,7 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const navigate = (target, book = null, navItem = target) => {
     if (!allowedSections.includes(target)) return
     setSection(target)
@@ -84,6 +100,39 @@ export default function App() {
     setSidebarOpen(false)
   }
   const notify = (message) => { setToast(message); window.clearTimeout(window.__bookhubToast); window.__bookhubToast = window.setTimeout(() => setToast(''), 2800) }
+  const notifyStaffActivity = (action, transaction) => {
+    const verb = action === 'returned' ? 'returned' : 'borrowed'
+    const notification = {
+      id: `${transaction.id}-${action}-${Date.now()}`,
+      message: `${transaction.borrower} ${verb} “${transaction.title}”.`,
+      audience: 'staff',
+      createdAt: new Date().toISOString(),
+      readBy: [],
+    }
+    setActivityNotifications((current) => [notification, ...current].slice(0, 100))
+  }
+  const notifyMembersBookAvailable = (book) => {
+    const notification = {
+      id: `${book.id}-available-${Date.now()}`,
+      message: `“${book.title}” is available to borrow again.`,
+      audience: 'members',
+      createdAt: new Date().toISOString(),
+      readBy: [],
+    }
+    setActivityNotifications((current) => [notification, ...current].slice(0, 100))
+  }
+  const isStaff = session?.role === 'admin' || session?.role === 'librarian'
+  const currentStaffEmail = normalizeEmail(session?.email || '')
+  const notificationAudience = isStaff ? 'staff' : 'members'
+  const visibleNotifications = activityNotifications.filter((item) => item.audience === notificationAudience)
+  const unreadNotifications = visibleNotifications.filter((item) => !item.readBy?.includes(currentStaffEmail)).length
+  const markNotificationsRead = () => {
+    setActivityNotifications((current) => current.map((item) => (
+      item.readBy?.includes(currentStaffEmail)
+        ? item
+        : { ...item, readBy: [...(item.readBy || []), currentStaffEmail] }
+    )))
+  }
   const openBook = (book) => navigate('books', book)
   const logout = () => { setSession(null); setSection('dashboard'); setSelectedBook(null); setGlobalSearch(''); setSidebarOpen(false) }
   const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' ? 'Dashboard' : titles[section]
@@ -108,7 +157,7 @@ export default function App() {
           ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
           : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
       : section === 'librarian-desk'
-        ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} />
+        ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} />
         : section === 'books'
           ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && item.status !== 'Returned').map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
               if (!session || !memberRecord) {
@@ -139,6 +188,7 @@ export default function App() {
               }
               setTransactions((current) => [entry, ...current])
               setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
+              notifyStaffActivity('borrowed', entry)
               notify(`Borrowed “${book.title}” for ${memberRecord.name}`)
             }} />
           : section === 'history'
@@ -148,33 +198,36 @@ export default function App() {
               : section === 'borrowers'
                 ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
                 : section === 'circulation'
-                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
+                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
                   : section === 'reports'
                     ? <ReportsPage books={books} transactions={transactions} />
                     : section === 'staff'
                       ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
                       : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
   const searchSubmit = (event) => { event.preventDefault(); navigate('books') }
-    const signIn = async (role, email, password) => {
+    const signIn = async (_role, email, password) => {
       const normalized = normalizeEmail(email)
+      const staffAccount = staff.find((item) => normalizeEmail(item.email) === normalized && item.status === 'Active')
+      const memberAccount = borrowers.find((item) => normalizeEmail(item.email) === normalized && item.status === 'Active')
       let account = null
+      let role = ''
       let valid = false
-      if (role === 'admin' && normalized === 'admin@lrc.ph' && password === 'admin123') {
-        account = { name: 'Admin' }
+      if (normalized === 'admin@lrc.ph' && password === 'admin123') {
+        account = staffAccount || { name: 'Admin' }
+        role = 'admin'
         valid = true
-      } else if (role === 'admin') {
-        account = staff.find((item) => normalizeEmail(item.email) === normalized && item.role === 'Administrator' && item.status === 'Active')
-        valid = await verifyPassword(password, account)
-      } else if (role === 'librarian') {
-        account = staff.find((item) => normalizeEmail(item.email) === normalized && item.role === 'Librarian' && item.status === 'Active')
-        valid = await verifyPassword(password, account)
-      } else if (role === 'student' || role === 'employee') {
-        account = borrowers.find((item) => normalizeEmail(item.email) === normalized && item.accountType === role && item.status === 'Active')
-        valid = await verifyPassword(password, account)
+      } else if (staffAccount) {
+        account = staffAccount
+        role = staffAccount.role === 'Administrator' ? 'admin' : 'librarian'
+        valid = await verifyPassword(password, staffAccount)
+      } else if (memberAccount) {
+        account = memberAccount
+        role = memberAccount.accountType || 'student'
+        valid = await verifyPassword(password, memberAccount)
       }
-      if (!account || !valid) throw new Error('Email or password is incorrect for the selected account type.')
+      if (!account || !valid) throw new Error('Email or password is incorrect.')
       setSession({ authenticated: true, role, email: normalized, name: account.name || 'Library User' })
-      setSection(role === 'student' || role === 'employee' ? 'dashboard' : 'dashboard')
+      setSection('dashboard')
       setSelectedBook(null)
     }
     const createMemberAccount = async ({ role, email, password, name, course }) => {
@@ -201,7 +254,7 @@ export default function App() {
         : session.role === 'librarian'
           ? <LibrarianSidebar session={session} activeNavItem={activeNavItem} overdueCount={overdueCount} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />
           : <MemberSidebar session={session} activeNavItem={activeNavItem} onNavigate={navigate} onLogout={logout} sidebarOpen={sidebarOpen} />}
-      {sidebarOpen && <button className="fixed inset-0 z-20 bg-[#173b63]/40 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
+      {sidebarOpen && <button className="fixed inset-0 z-20 bg-[#684a37]/40 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
       <main className="min-h-screen md:ml-[246px]">
         <header className="flex h-[67px] items-center justify-between border-b border-[#e2e8f0] bg-[#f8fafc]/85 px-6 backdrop-blur-sm md:px-9">
           <div className="flex items-center gap-3">
@@ -221,10 +274,59 @@ export default function App() {
               <input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#173b63] placeholder:text-[#64748b] focus:outline-none" />
               <kbd className="rounded border border-[#e2e8f0] bg-[#f8fafc] px-1.5 py-0.5 text-[8px] text-[#64748b]">⌘ K</kbd>
             </form>
-            <button className="relative inline-grid h-[34px] w-[34px] place-items-center rounded-md border border-transparent text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" aria-label="Notifications" onClick={() => notify(overdueCount ? `You have ${overdueCount} overdue item${overdueCount === 1 ? '' : 's'} to review.` : 'You are all caught up.') }>
-              <Bell size={18} />
-              {overdueCount > 0 && <i className="absolute right-[7px] top-[7px] h-1.5 w-1.5 rounded-full border border-white bg-[#c86e5f]" />}
-            </button>
+            {isStaff ? (
+              <div className="relative">
+                <button className="relative inline-grid h-[34px] w-[34px] place-items-center rounded-md border border-transparent text-[#64748b] transition hover:bg-[#e2e8dc] hover:text-[#173b63]" aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>
+                  <Bell size={18} />
+                  {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#c86e5f] px-1 text-[9px] font-bold text-white">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+                </button>
+                {notificationsOpen && (
+                  <section className="absolute right-0 top-11 z-50 w-[min(350px,calc(100vw-2rem))] rounded-2xl border border-[#e5dbd1] bg-[#fbf8f4] p-3 shadow-[0_18px_45px_rgba(71,49,38,0.18)]" aria-label="Activity notifications">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <h2 className="text-sm font-bold text-[#342a23]">Borrowing activity</h2>
+                      {unreadNotifications > 0 && <button className="text-[11px] font-semibold text-[#684a37] hover:text-[#50392c]" onClick={markNotificationsRead}>Mark all read</button>}
+                    </div>
+                    <div className="max-h-[min(60vh,360px)] space-y-2 overflow-y-auto">
+                      {visibleNotifications.length ? visibleNotifications.map((item) => {
+                        const unread = !item.readBy?.includes(currentStaffEmail)
+                        return (
+                          <article key={item.id} className={`rounded-xl border px-3 py-2.5 ${unread ? 'border-[#d8c3b1] bg-[#f3e8dd]' : 'border-[#e5dbd1] bg-[#fffdfb]'}`}>
+                            <p className="text-xs font-medium leading-5 text-[#342a23]">{item.message}</p>
+                            <time className="mt-1 block text-[10px] text-[#806f61]" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time>
+                          </article>
+                        )
+                      }) : <p className="py-6 text-center text-xs text-[#806f61]">No borrowing or return activity yet.</p>}
+                    </div>
+                  </section>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <button className="relative inline-grid h-[34px] w-[34px] place-items-center rounded-md border border-transparent text-[#64748b] transition hover:bg-[#e2e8dc] hover:text-[#173b63]" aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>
+                  <Bell size={18} />
+                  {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#c86e5f] px-1 text-[9px] font-bold text-white">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+                </button>
+                {notificationsOpen && (
+                  <section className="absolute right-0 top-11 z-50 w-[min(350px,calc(100vw-2rem))] rounded-2xl border border-[#e5dbd1] bg-[#fbf8f4] p-3 shadow-[0_18px_45px_rgba(71,49,38,0.18)]" aria-label="Book availability notifications">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <h2 className="text-sm font-bold text-[#342a23]">Book availability</h2>
+                      {unreadNotifications > 0 && <button className="text-[11px] font-semibold text-[#684a37] hover:text-[#50392c]" onClick={markNotificationsRead}>Mark all read</button>}
+                    </div>
+                    <div className="max-h-[min(60vh,360px)] space-y-2 overflow-y-auto">
+                      {visibleNotifications.length ? visibleNotifications.map((item) => {
+                        const unread = !item.readBy?.includes(currentStaffEmail)
+                        return (
+                          <article key={item.id} className={`rounded-xl border px-3 py-2.5 ${unread ? 'border-[#d8c3b1] bg-[#f3e8dd]' : 'border-[#e5dbd1] bg-[#fffdfb]'}`}>
+                            <p className="text-xs font-medium leading-5 text-[#342a23]">{item.message}</p>
+                            <time className="mt-1 block text-[10px] text-[#806f61]" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time>
+                          </article>
+                        )
+                      }) : <p className="py-6 text-center text-xs text-[#806f61]">No books have become available yet.</p>}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
             <span className="h-[26px] w-px bg-[#e2e8f0]" />
             <button className="grid rounded-full bg-transparent p-0" aria-label="Sign out" title="Sign out" onClick={logout}>
               <Avatar name={session.name} />
@@ -249,7 +351,7 @@ export default function App() {
           {content}
 
           <footer className="mt-6 flex items-center justify-between gap-3 border-t border-[#e2e8f0] py-4 text-[11px] text-[#64748b]">
-            <span>© 2026 National University · BOOKHUB</span>
+            <span>© 2026 BOOKHUB</span>
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#4d8a70]" />
               All systems operational

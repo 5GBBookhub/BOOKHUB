@@ -3,6 +3,13 @@ export const formatDate = (value) => value ? new Date(`${value}T00:00:00`).toLoc
 export const money = (value) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value || 0)
 export const daysLate = (due) => Math.max(0, Math.floor((new Date(`${today()}T00:00:00`) - new Date(`${due}T00:00:00`)) / 86400000))
 export const normalizeEmail = (email) => email.trim().toLowerCase()
+export function generateAccountEmail(name, domain) {
+  const parts = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length < 2) return ''
+  const surname = parts[parts.length - 1].replace(/[^a-z0-9]/gi, '').toLowerCase()
+  const firstInitial = parts[0].replace(/[^a-z0-9]/gi, '').charAt(0).toLowerCase()
+  return surname && firstInitial ? `${surname}${firstInitial}@${domain}` : ''
+}
 export async function hashPassword(password, saltHex = null) {
   const salt = saltHex ? Uint8Array.from(saltHex.match(/.{2}/g), (byte) => parseInt(byte, 16)) : crypto.getRandomValues(new Uint8Array(16))
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])

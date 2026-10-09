@@ -7,7 +7,7 @@ function Panel({ children, className = '' }) {
   return <section className={`rounded-[18px] border border-[#e3e7ed] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.04)] ${className}`}>{children}</section>
 }
 
-export default function LibrarianDesk({ books, borrowers, transactions, settings, setBooks, setTransactions, onToast }) {
+export default function LibrarianDesk({ books, borrowers, transactions, settings, setBooks, setTransactions, onToast, onActivityNotification, onBookAvailable }) {
   const [memberQuery, setMemberQuery] = useState('')
   const [bookQuery, setBookQuery] = useState('')
   const [loanQuery, setLoanQuery] = useState('')
@@ -27,16 +27,22 @@ export default function LibrarianDesk({ books, borrowers, transactions, settings
     if (!borrower || !book) return onToast('Select a member and an available book first.')
     const currentLoans = transactions.filter((item) => item.borrowerId === borrower.id && item.status !== 'Returned').length
     if (currentLoans >= Number(settings.maxBooks)) return onToast(`${borrower.name} has reached the ${settings.maxBooks}-book limit.`)
-    setTransactions((current) => [{ id: `TRX-${String(Date.now()).slice(-4)}`, borrowerId: borrower.id, borrower: borrower.name, bookId: book.id, title: book.title, issued: today(), due: dueDate, status: 'Borrowed', fine: 0 }, ...current])
+    const transaction = { id: `TRX-${String(Date.now()).slice(-4)}`, borrowerId: borrower.id, borrower: borrower.name, bookId: book.id, title: book.title, issued: today(), due: dueDate, status: 'Borrowed', fine: 0 }
+    setTransactions((current) => [transaction, ...current])
     setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: item.available - 1, borrowed: item.borrowed + 1 } : item))
+    onActivityNotification?.('borrowed', transaction)
     setSelectedBorrower('')
     setSelectedBook('')
     onToast(`Checked out ${book.title} to ${borrower.name}.`)
   }
 
   const checkin = (loan) => {
-    setTransactions((current) => current.map((item) => item.id === loan.id ? { ...item, status: 'Returned', returned: today(), fine: daysLate(item.due) * Number(settings.fineRate) } : item))
+    const returnedTransaction = { ...loan, status: 'Returned', returned: today(), fine: daysLate(loan.due) * Number(settings.fineRate) }
+    const returnedBook = books.find((book) => book.id === loan.bookId)
+    setTransactions((current) => current.map((item) => item.id === loan.id ? returnedTransaction : item))
     setBooks((current) => current.map((item) => item.id === loan.bookId ? { ...item, available: Math.min(item.copies, item.available + 1) } : item))
+    onActivityNotification?.('returned', returnedTransaction)
+    if (returnedBook?.available === 0) onBookAvailable?.(returnedBook)
     onToast(`Checked in ${loan.title}.`)
   }
 

@@ -17,34 +17,34 @@ export const initialBooks = [
 ]
 
 export const initialBorrowers = [
-  { id: 'NU-2024-0182', name: 'Isabella Reyes', email: 'isabella.reyes@nu.edu.ph', course: 'BS Information Technology', joined: '2024-08-18', status: 'Active', borrowed: 2 },
-  { id: 'NU-2023-0094', name: 'Gabriel Santos', email: 'gabriel.santos@nu.edu.ph', course: 'BS Computer Science', joined: '2023-09-02', status: 'Active', borrowed: 1 },
-  { id: 'NU-2024-0221', name: 'Mia Dela Cruz', email: 'mia.delacruz@nu.edu.ph', course: 'BS Communication', joined: '2024-08-23', status: 'Active', borrowed: 3 },
-  { id: 'NU-2022-0117', name: 'Liam Villanueva', email: 'liam.villanueva@nu.edu.ph', course: 'BS Architecture', joined: '2022-07-12', status: 'On hold', borrowed: 1 },
-  { id: 'NU-2023-0156', name: 'Sofia Mendoza', email: 'sofia.mendoza@nu.edu.ph', course: 'BS Psychology', joined: '2023-08-29', status: 'Active', borrowed: 0 },
-  { id: 'NU-2024-0318', name: 'Noah Garcia', email: 'noah.garcia@nu.edu.ph', course: 'BS Information Systems', joined: '2024-09-05', status: 'Active', borrowed: 1 },
+  { id: '2024-0182', name: 'Isabella Reyes', email: 'isabella.reyes@students.edu.ph', course: 'BS Information Technology', joined: '2024-08-18', status: 'Active', borrowed: 2 },
+  { id: '2023-0094', name: 'Gabriel Santos', email: 'gabriel.santos@students.edu.ph', course: 'BS Computer Science', joined: '2023-09-02', status: 'Active', borrowed: 1 },
+  { id: '2024-0221', name: 'Mia Dela Cruz', email: 'mia.delacruz@students.edu.ph', course: 'BS Communication', joined: '2024-08-23', status: 'Active', borrowed: 3 },
+  { id: '2022-0117', name: 'Liam Villanueva', email: 'liam.villanueva@students.edu.ph', course: 'BS Architecture', joined: '2022-07-12', status: 'On hold', borrowed: 1 },
+  { id: '2023-0156', name: 'Sofia Mendoza', email: 'sofia.mendoza@students.edu.ph', course: 'BS Psychology', joined: '2023-08-29', status: 'Active', borrowed: 0 },
+  { id: '2024-0318', name: 'Noah Garcia', email: 'noah.garcia@students.edu.ph', course: 'BS Information Systems', joined: '2024-09-05', status: 'Active', borrowed: 1 },
 ]
 
 export const initialTransactions = [
-  { id: 'TRX-0281', borrowerId: 'NU-2024-0182', borrower: 'Isabella Reyes', bookId: 'BK-1042', title: 'The Midnight Library', issued: dateFromToday(-4), due: dateFromToday(10), status: 'Borrowed', fine: 0 },
-  { id: 'TRX-0280', borrowerId: 'NU-2023-0094', borrower: 'Gabriel Santos', bookId: 'BK-1043', title: 'Atomic Habits', issued: dateFromToday(-18), due: dateFromToday(-4), status: 'Overdue', fine: 20 },
-  { id: 'TRX-0279', borrowerId: 'NU-2024-0221', borrower: 'Mia Dela Cruz', bookId: 'BK-1044', title: 'The Silent Patient', issued: dateFromToday(-2), due: dateFromToday(12), status: 'Borrowed', fine: 0 },
-  { id: 'TRX-0278', borrowerId: 'NU-2024-0182', borrower: 'Isabella Reyes', bookId: 'BK-1046', title: 'The Design of Everyday Things', issued: dateFromToday(-28), due: dateFromToday(-14), returned: dateFromToday(-10), status: 'Returned', fine: 0 },
-  { id: 'TRX-0277', borrowerId: 'NU-2022-0117', borrower: 'Liam Villanueva', bookId: 'BK-1047', title: 'Ikigai', issued: dateFromToday(-21), due: dateFromToday(-7), status: 'Overdue', fine: 35 },
-  { id: 'TRX-0276', borrowerId: 'NU-2024-0318', borrower: 'Noah Garcia', bookId: 'BK-1048', title: 'Sapiens', issued: dateFromToday(-6), due: dateFromToday(8), status: 'Borrowed', fine: 0 },
-  { id: 'TRX-0275', borrowerId: 'NU-2024-0221', borrower: 'Mia Dela Cruz', bookId: 'BK-1049', title: 'Little Women', issued: dateFromToday(-35), due: dateFromToday(-21), returned: dateFromToday(-22), status: 'Returned', fine: 0 },
-  { id: 'TRX-0274', borrowerId: 'NU-2023-0156', borrower: 'Sofia Mendoza', bookId: 'BK-1050', title: 'Deep Work', issued: dateFromToday(-8), due: dateFromToday(6), status: 'Borrowed', fine: 0 },
+  { id: 'TRX-0281', borrowerId: '2024-0182', borrower: 'Isabella Reyes', bookId: 'BK-1042', title: 'The Midnight Library', issued: dateFromToday(-4), due: dateFromToday(10), status: 'Borrowed', fine: 0 },
+  { id: 'TRX-0280', borrowerId: '2023-0094', borrower: 'Gabriel Santos', bookId: 'BK-1043', title: 'Atomic Habits', issued: dateFromToday(-18), due: dateFromToday(-4), status: 'Overdue', fine: 20 },
+  { id: 'TRX-0279', borrowerId: '2024-0221', borrower: 'Mia Dela Cruz', bookId: 'BK-1044', title: 'The Silent Patient', issued: dateFromToday(-2), due: dateFromToday(12), status: 'Borrowed', fine: 0 },
+  { id: 'TRX-0278', borrowerId: '2024-0182', borrower: 'Isabella Reyes', bookId: 'BK-1046', title: 'The Design of Everyday Things', issued: dateFromToday(-28), due: dateFromToday(-14), returned: dateFromToday(-10), status: 'Returned', fine: 0 },
+  { id: 'TRX-0277', borrowerId: '2022-0117', borrower: 'Liam Villanueva', bookId: 'BK-1047', title: 'Ikigai', issued: dateFromToday(-21), due: dateFromToday(-7), status: 'Overdue', fine: 35 },
+  { id: 'TRX-0276', borrowerId: '2024-0318', borrower: 'Noah Garcia', bookId: 'BK-1048', title: 'Sapiens', issued: dateFromToday(-6), due: dateFromToday(8), status: 'Borrowed', fine: 0 },
+  { id: 'TRX-0275', borrowerId: '2024-0221', borrower: 'Mia Dela Cruz', bookId: 'BK-1049', title: 'Little Women', issued: dateFromToday(-35), due: dateFromToday(-21), returned: dateFromToday(-22), status: 'Returned', fine: 0 },
+  { id: 'TRX-0274', borrowerId: '2023-0156', borrower: 'Sofia Mendoza', bookId: 'BK-1050', title: 'Deep Work', issued: dateFromToday(-8), due: dateFromToday(6), status: 'Borrowed', fine: 0 },
 ]
 
 export const initialStaff = [
   { id: 'ST-001', name: 'Leona De Chavez', email: 'admin@lrc.ph', role: 'Administrator', status: 'Active' },
-  { id: 'ST-002', name: 'Bench', email: 'carlo.bautista@nu.edu.ph', role: 'Librarian', status: 'Active' },
-  { id: 'ST-003', name: 'Patricia Lim', email: 'patricia.lim@nu.edu.ph', role: 'Librarian', status: 'Active' },
+  { id: 'ST-002', name: 'Bench', email: 'carlo.bautista@lib.ph', role: 'Librarian', status: 'Active' },
+  { id: 'ST-003', name: 'Patricia Lim', email: 'patricia.lim@lib.ph', role: 'Librarian', status: 'Active' },
 ]
 
 export const initialSettings = {
-  libraryName: 'National University Library',
-  email: 'library@nu.edu.ph',
+  libraryName: 'BookHub Library',
+  email: 'library@edu.ph',
   loanDays: 14,
   maxBooks: 3,
   fineRate: 5,
