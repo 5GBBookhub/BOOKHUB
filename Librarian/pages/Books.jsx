@@ -82,7 +82,7 @@ function BorrowDateModal({ book, onClose, onSubmit }) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#173b63]/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#684a37]/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="w-full max-w-[440px] rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.22)]" role="dialog" aria-modal="true" aria-label="Borrow book">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>

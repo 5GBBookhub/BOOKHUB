@@ -1,23 +1,37 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertCircle, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react'
-import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
+import { daysLate, formatDate, generateAccountEmail, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
 
 export function CoverArt({ book, compact = false }) {
   const toneMap = {
-    'cover-new': 'from-[#173b63] via-[#173b63] to-[#94a3b8]',
-    'cover-gold': 'from-[#94a3b8] via-[#94a3b8] to-[#e2e8f0]',
-    'cover-forest': 'from-[#2d5b52] via-[#4d8a70] to-[#cfe8d5]',
-    'cover-coral': 'from-[#b85d4d] via-[#d77c65] to-[#f7dccb]',
-    'cover-ink': 'from-[#173b63] via-[#173b63] to-[#94a3b8]',
+    'cover-new': 'from-[#684a37] via-[#684a37] to-[#c9b39f]',
+    'cover-gold': 'from-[#725239] via-[#8d6848] to-[#b28b5a]',
+    'cover-forest': 'from-[#315b4a] via-[#496f59] to-[#789278]',
+    'cover-coral': 'from-[#834638] via-[#a75d49] to-[#c27c63]',
+    'cover-ink': 'from-[#684a37] via-[#684a37] to-[#c9b39f]',
+    'cover-midnight': 'from-[#50372d] via-[#684a37] to-[#987255]',
+    'cover-habits': 'from-[#725239] via-[#8d6848] to-[#b28b5a]',
+    'cover-silent': 'from-[#50372d] via-[#684a37] to-[#987255]',
+    'cover-educated': 'from-[#834638] via-[#a75d49] to-[#c27c63]',
+    'cover-design': 'from-[#50372d] via-[#684a37] to-[#987255]',
+    'cover-ikigai': 'from-[#315b4a] via-[#496f59] to-[#789278]',
+    'cover-sapiens': 'from-[#725239] via-[#8d6848] to-[#b28b5a]',
+    'cover-women': 'from-[#834638] via-[#a75d49] to-[#c27c63]',
+    'cover-deep': 'from-[#50372d] via-[#684a37] to-[#987255]',
+    'cover-achilles': 'from-[#725239] via-[#8d6848] to-[#b28b5a]',
+    'cover-thinking': 'from-[#684a37] via-[#8d7158] to-[#b49a7f]',
+    'cover-alchemist': 'from-[#315b4a] via-[#496f59] to-[#789278]',
   }
+  const unavailable = book.available <= 0
 
   return (
-    <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br ${toneMap[book.tone || 'cover-new']} p-4 text-white shadow-[0_18px_35px_rgba(17,31,57,0.18)] ${compact ? 'h-[130px]' : 'h-[220px]'}`} aria-label={`Cover artwork for ${book.title}`}>
-      <span className="mb-3 block text-[9px] font-semibold uppercase tracking-[0.2em] text-white/75">NU LIBRARY · {book.category.toUpperCase()}</span>
-      <span className="absolute inset-0 opacity-20" />
-      <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/40 bg-[#f8fafc]/10 text-[11px] font-bold">NU</span>
-      <span className="mt-4 block text-[clamp(1rem,2vw,1.65rem)] font-black leading-tight tracking-tight">{book.title}</span>
-      <span className="mt-2 block text-xs text-white/80">{book.author}</span>
+    <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br ${toneMap[book.tone] || toneMap['cover-new']} p-4 text-white shadow-[0_18px_35px_rgba(104,74,55,0.18)] ${compact ? 'h-[130px]' : 'h-[220px]'}`} aria-label={`Cover artwork for ${book.title}${unavailable ? ', unavailable' : ''}`}>
+      {unavailable && <span className="absolute inset-0 z-0 bg-[#342a23]/25" />}
+      <span className="relative z-10 mb-3 block text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90"> BOOKHUB LIBRARY · {book.category.toUpperCase()}</span>
+      <span className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-[#342a23]/15 text-[11px] font-bold">BH</span>
+      <span className="relative z-10 mt-4 block text-[clamp(1rem,2vw,1.65rem)] font-black leading-tight tracking-tight">{book.title}</span>
+      <span className="relative z-10 mt-2 block text-xs text-white/90">{book.author}</span>
+      {unavailable && <span className="absolute bottom-3 right-3 z-10 rounded-full bg-[#f7f3ee]/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#684a37] shadow-sm">Unavailable</span>}
     </div>
   )
 }
@@ -46,11 +60,11 @@ export function ActivityChart() {
     <div className="mt-4 overflow-hidden rounded-2xl border border-[#e2e8f0] bg-[#e2e8f0] p-3" aria-label="Borrowing activity over the last seven months">
       <div className="mb-2 flex justify-between text-[10px] text-[#64748b]"><span>80</span><span>60</span><span>40</span><span>20</span><span>0</span></div>
       <svg className="h-[200px] w-full" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="Area chart showing borrowing activity trending upward">
-        <defs><linearGradient id="activityFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#94a3b8" stopOpacity=".28" /><stop offset="100%" stopColor="#94a3b8" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id="activityFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#684a37" stopOpacity=".28" /><stop offset="100%" stopColor="#684a37" stopOpacity="0" /></linearGradient></defs>
         {[12, 58, 104, 150, 196].map((y) => <line key={y} x1="0" y1={y} x2="700" y2={y} stroke="#e2e8f0" strokeWidth="1" />)}
         <path d="M0 166 C40 156 54 148 92 153 S145 139 185 143 S238 121 278 127 S330 111 370 119 S423 87 463 100 S515 75 555 81 S616 46 650 58 S682 29 700 35 L700 205 L0 205Z" fill="url(#activityFill)" />
-        <path d="M0 166 C40 156 54 148 92 153 S145 139 185 143 S238 121 278 127 S330 111 370 119 S423 87 463 100 S515 75 555 81 S616 46 650 58 S682 29 700 35" fill="none" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="555" cy="81" r="5" fill="#94a3b8" />
+        <path d="M0 166 C40 156 54 148 92 153 S145 139 185 143 S238 121 278 127 S330 111 370 119 S423 87 463 100 S515 75 555 81 S616 46 650 58 S682 29 700 35" fill="none" stroke="#684a37" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="555" cy="81" r="5" fill="#684a37" />
       </svg>
       <div className="mt-2 flex justify-between text-[10px] font-medium text-[#64748b]"><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
     </div>
@@ -62,7 +76,7 @@ export function DonutChart({ transactions }) {
   const total = counts.reduce((sum, value) => sum + value, 0) || 1
   const circumference = 2 * Math.PI * 60
   const segments = counts.map((count) => (count / total) * circumference)
-  const segmentColors = ['stroke-[#173b63]', 'stroke-[#94a3b8]', 'stroke-[#64748b]']
+  const segmentColors = ['stroke-[#684a37]', 'stroke-[#c9b39f]', 'stroke-[#987255]']
   let offset = 0
   return (
     <div className="mt-5 flex flex-col items-center gap-5 md:flex-row md:items-center md:justify-between">
@@ -92,7 +106,7 @@ export function DonutChart({ transactions }) {
         </div>
       </div>
       <div className="w-full space-y-3">
-        {[['Borrowed', counts[0], 'bg-[#173b63]'], ['Returned', counts[1], 'bg-[#94a3b8]'], ['Overdue', counts[2], 'bg-[#d77c65]']].map(([label, count, color]) => (
+        {[['Borrowed', counts[0], 'bg-[#684a37]'], ['Returned', counts[1], 'bg-[#c9b39f]'], ['Overdue', counts[2], 'bg-[#d77c65]']].map(([label, count, color]) => (
           <div className="flex items-center justify-between gap-3 text-sm text-[#173b63]" key={label}>
             <div className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${color}`} />{label}</div>
             <strong>{count}</strong>
@@ -110,8 +124,8 @@ export function Modal({ title, subtitle, onClose, children, wide = false }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#173b63]/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className={`w-full max-w-[560px] rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.22)] ${wide ? 'max-w-[720px]' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#684a37]/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className={`max-h-[90vh] w-full max-w-[560px] overflow-y-auto rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.22)] ${wide ? 'max-w-[720px]' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="mb-5 flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-[#173b63]">{title}</h2>{subtitle && <p className="mt-1 text-sm text-[#64748b]">{subtitle}</p>}</div><button className="inline-grid h-9 w-9 place-items-center rounded-md text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173b63]" onClick={onClose} aria-label="Close dialog"><X size={18} /></button></div>
         {children}
       </section>
@@ -122,18 +136,28 @@ export function Modal({ title, subtitle, onClose, children, wide = false }) {
 export function RecordForm({ kind, record, onSave, onClose }) {
   const [form, setForm] = useState(record || (kind === 'book'
     ? { title: '', author: '', category: 'Fiction', isbn: '', year: new Date().getFullYear(), copies: 1, available: 1, borrowed: 0, tone: 'cover-new' }
-    : { id: '', name: '', email: '', course: '', joined: today(), status: 'Active', borrowed: 0 }))
+    : { id: '', name: '', email: '', course: '', joined: today(), status: 'Active', borrowed: 0, accountType: 'student', password: '' }))
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const isBook = kind === 'book'
   const onSubmit = (event) => {
     event.preventDefault()
-    onSave({ ...form, copies: Number(form.copies), available: Number(form.available), year: Number(form.year), borrowed: Number(form.borrowed) })
+    onSave(isBook
+      ? { ...form, copies: Number(form.copies), available: Number(form.available), year: Number(form.year), borrowed: Number(form.borrowed) }
+      : form)
   }
   return (
     <Modal title={`${record ? 'Edit' : 'Add'} ${isBook ? 'book' : 'borrower'}`} subtitle={isBook ? 'Keep the catalog details up to date.' : 'Create a library member profile.'} onClose={onClose}>
       <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-        {!isBook && <label className="text-sm font-medium text-[#173b63]">Student ID<input required value={form.id} onChange={(event) => set('id', event.target.value)} placeholder="NU-2025-0001" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>}
-        <label className="text-sm font-medium text-[#173b63] md:col-span-2">{isBook ? 'Book title' : 'Full name'}<input required value={isBook ? form.title : form.name} onChange={(event) => set(isBook ? 'title' : 'name', event.target.value)} placeholder={isBook ? 'Enter book title' : 'Enter full name'} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+        {!isBook && <label className="text-sm font-medium text-[#173b63]">Student ID<input required value={form.id} onChange={(event) => set('id', event.target.value)} placeholder="2025-0001" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>}
+        <label className="text-sm font-medium text-[#173b63] md:col-span-2">{isBook ? 'Book title' : 'Full name'}<input required value={isBook ? form.title : form.name} onChange={(event) => {
+          const value = event.target.value
+          if (isBook) set('title', value)
+          else setForm((current) => ({
+            ...current,
+            name: value,
+            email: record ? current.email : generateAccountEmail(value, 'students.ph'),
+          }))
+        }} placeholder={isBook ? 'Enter book title' : 'Enter full name'} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
         {isBook ? <>
           <label className="text-sm font-medium text-[#173b63]">Author<input required value={form.author} onChange={(event) => set('author', event.target.value)} placeholder="Author name" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Category<select value={form.category} onChange={(event) => set('category', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10">{['Fiction', 'Biography', 'History', 'Lifestyle', 'Mystery', 'Psychology', 'Self Development', 'Technology'].map((category) => <option key={category}>{category}</option>)}</select></label>
@@ -142,9 +166,9 @@ export function RecordForm({ kind, record, onSave, onClose }) {
           <label className="text-sm font-medium text-[#173b63]">Total copies<input type="number" min="1" value={form.copies} onChange={(event) => { const copies = Number(event.target.value); setForm((current) => ({ ...current, copies, available: Math.min(current.available, copies) })) }} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Available copies<input type="number" min="0" max={form.copies} value={form.available} onChange={(event) => set('available', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
         </> : <>
-          <label className="text-sm font-medium text-[#173b63]">Email address<input type="email" required value={form.email} onChange={(event) => set('email', event.target.value)} placeholder="student@nu.edu.ph" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+          <label className="text-sm font-medium text-[#173b63]">Generated email<input type="email" required value={form.email} readOnly={!record} onChange={(event) => set('email', event.target.value)} placeholder="Surname + first initial" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10 read-only:cursor-not-allowed read-only:bg-[#f1eae2]" /></label>
           <label className="text-sm font-medium text-[#173b63]">Course / program<input required value={form.course} onChange={(event) => set('course', event.target.value)} placeholder="Degree program" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
-          <label className="text-sm font-medium text-[#173b63]">Member since<input type="date" value={form.joined} onChange={(event) => set('joined', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+          {!record && <label className="text-sm font-medium text-[#173b63] md:col-span-2">Temporary password<input type="password" required minLength="8" autoComplete="new-password" value={form.password} onChange={(event) => set('password', event.target.value)} placeholder="At least 8 characters" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /><span className="mt-1 block text-xs font-normal text-[#64748b]">Share this password with the student. It is stored as a hash.</span></label>}
           <label className="text-sm font-medium text-[#173b63]">Account status<select value={form.status} onChange={(event) => set('status', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10"><option>Active</option><option>On hold</option></select></label>
         </>}
         <div className="md:col-span-2 mt-2 flex items-center justify-end gap-3 border-t border-[#e2e8f0] pt-4"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 py-2 text-sm font-semibold text-[#173b63] transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" onClick={onClose}>Cancel</button><button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#173b63] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#173b63]"><Check size={15} />Save {isBook ? 'book' : 'borrower'}</button></div>

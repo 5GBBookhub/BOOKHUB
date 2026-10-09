@@ -79,8 +79,8 @@ function MetricCard({ label, value, detail, icon: Icon, tone, onClick }) {
 
 function DashboardMetric({ label, value, detail, icon: Icon, tone, change, onClick }) {
   const tones = {
-    blue: 'bg-[#e8f0ff] text-[#315c99]',
-    sky: 'bg-[#e3f4ff] text-[#3483bc]',
+    blue: 'bg-[#e8d8c8] text-[#684a37]',
+    sky: 'bg-[#e8d8c8] text-[#684a37]',
     green: 'bg-[#dcf8e7] text-[#15945b]',
     coral: 'bg-[#ffe3df] text-[#ef4c4c]',
   }
@@ -101,12 +101,12 @@ function BorrowingActivityChart() {
     <div className="mt-5">
       <svg className="h-[220px] w-full" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="Borrowing activity over the last seven months">
         <defs>
-          <linearGradient id="borrowedFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#2f7cc2" stopOpacity=".28" /><stop offset="100%" stopColor="#2f7cc2" stopOpacity=".04" /></linearGradient>
+          <linearGradient id="borrowedFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#684a37" stopOpacity=".28" /><stop offset="100%" stopColor="#684a37" stopOpacity=".04" /></linearGradient>
           <linearGradient id="returnedFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#19a765" stopOpacity=".2" /><stop offset="100%" stopColor="#19a765" stopOpacity=".03" /></linearGradient>
         </defs>
         {[24, 85, 146, 207].map((y) => <line key={y} x1="0" y1={y} x2="700" y2={y} stroke="#d9e1ea" strokeDasharray="3 3" />)}
         <path d="M0 144 C48 124 78 111 116 103 S185 87 232 83 S287 100 333 119 S389 145 430 151 S483 97 523 77 S582 61 620 54 S666 48 700 44 L700 207 L0 207Z" fill="url(#borrowedFill)" />
-        <path d="M0 144 C48 124 78 111 116 103 S185 87 232 83 S287 100 333 119 S389 145 430 151 S483 97 523 77 S582 61 620 54 S666 48 700 44" fill="none" stroke="#2f7cc2" strokeWidth="3" strokeLinecap="round" />
+        <path d="M0 144 C48 124 78 111 116 103 S185 87 232 83 S287 100 333 119 S389 145 430 151 S483 97 523 77 S582 61 620 54 S666 48 700 44" fill="none" stroke="#684a37" strokeWidth="3" strokeLinecap="round" />
         <path d="M0 159 C47 143 82 130 119 119 S184 96 232 91 S290 101 333 113 S390 135 430 137 S478 98 523 86 S580 91 620 98 S670 111 700 115 L700 207 L0 207Z" fill="url(#returnedFill)" />
         <path d="M0 159 C47 143 82 130 119 119 S184 96 232 91 S290 101 333 113 S390 135 430 137 S478 98 523 86 S580 91 620 98 S670 111 700 115" fill="none" stroke="#19a765" strokeWidth="3" strokeLinecap="round" />
       </svg>
@@ -117,7 +117,7 @@ function BorrowingActivityChart() {
 
 function TransactionStatus({ transactions }) {
   const statuses = [
-    ['Borrowed', transactions.filter((item) => item.status === 'Borrowed').length, '#2f7cc2'],
+    ['Borrowed', transactions.filter((item) => item.status === 'Borrowed').length, '#684a37'],
     ['Returned', transactions.filter((item) => item.status === 'Returned').length, '#15945b'],
     ['Overdue', transactions.filter((item) => item.status === 'Overdue').length, '#ef3030'],
     ['Pending', transactions.filter((item) => item.status === 'Pending').length, '#ed9200'],
@@ -245,7 +245,7 @@ export default function Dashboard({
           <div className="overflow-hidden rounded-[18px] border border-[#e3e7ed] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.04)]">
             <div className="flex items-start justify-between px-6 pb-4 pt-5">
               <div><h2 className="text-base font-bold text-[#111827]">Recent Transactions</h2><p className="mt-1 text-sm text-[#64748b]">Latest borrowing activity</p></div>
-              <button type="button" onClick={() => onNavigate('circulation')} className="inline-flex items-center gap-1.5 pt-1 text-sm font-medium text-[#111827] hover:text-[#315c99]">View all <ArrowRight size={16} /></button>
+              <button type="button" onClick={() => onNavigate('circulation')} className="inline-flex items-center gap-1.5 pt-1 text-sm font-medium text-[#111827] hover:text-[#684a37]">View all <ArrowRight size={16} /></button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[680px] border-collapse text-left">

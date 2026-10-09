@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-The app stores demo records in the browser's local storage. Use Settings to adjust the lending policy and notifications.
+The app stores library records in the browser's local storage so updates are shared between tabs. Each tab keeps its own sign-in session, allowing different users to use BOOKHUB in separate tabs in the same browser.
+
+Administrators can create student accounts from **Borrowers**. Student emails are generated from the surname and first-name initial (for example, `santosa@students.edu.ph`); the administrator sets a temporary password. Librarian accounts can be created from **Users / Staff**, with generated addresses at `@lib.ph` and an administrator-set password.
 
 ## Demo sign-in
 
