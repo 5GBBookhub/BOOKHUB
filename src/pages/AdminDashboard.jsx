@@ -4,7 +4,7 @@ import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, 
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../../Librarian/lib/helpers.js'
 
 export function Dashboard({ books, borrowers, transactions, onNavigate }) {
-  const activeLoans = transactions.filter((item) => item.status !== 'Returned').length
+  const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status)).length
   const overdue = transactions.filter((item) => item.status === 'Overdue' || (item.status === 'Borrowed' && daysLate(item.due) > 0)).length
   const totalCopies = books.reduce((sum, book) => sum + book.copies, 0)
   const topBooks = [...books].sort((a, b) => b.borrowed - a.borrowed).slice(0, 4)

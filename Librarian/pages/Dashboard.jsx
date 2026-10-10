@@ -160,7 +160,7 @@ export default function Dashboard({
     () => transactions.filter((item) => item.status === 'Overdue' || (item.status === 'Borrowed' && daysLate(item.due) > 0)),
     [transactions],
   )
-  const activeLoans = transactions.filter((item) => item.status !== 'Returned')
+  const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const availableCopies = books.reduce((sum, book) => sum + book.available, 0)
   const totalCopies = books.reduce((sum, book) => sum + book.copies, 0)
   const popularBooks = [...books].sort((a, b) => b.borrowed - a.borrowed).slice(0, 4)

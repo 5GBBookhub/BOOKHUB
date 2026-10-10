@@ -77,6 +77,25 @@ export default function App() {
   }, [setStaff])
   const [session, setSession] = useStoredState('bookhub.session', null, true)
   useEffect(() => {
+    const expirePendingRequests = () => {
+      const now = Date.now()
+      setTransactions((current) => {
+        const expired = current.filter((item) => item.status === 'Pending' && item.claimExpiresAt <= now)
+        if (!expired.length) return current
+        setBooks((currentBooks) => currentBooks.map((book) => {
+          const released = expired.filter((item) => item.bookId === book.id).length
+          return released ? { ...book, available: Math.min(book.copies, book.available + released) } : book
+        }))
+        return current.map((item) => expired.some((expiredItem) => expiredItem.id === item.id)
+          ? { ...item, status: 'Cancelled', cancelledAt: new Date(now).toISOString(), cancellationReason: 'Claim grace period expired' }
+          : item)
+      })
+    }
+    expirePendingRequests()
+    const interval = window.setInterval(expirePendingRequests, 30_000)
+    return () => window.clearInterval(interval)
+  }, [setBooks, setTransactions])
+  useEffect(() => {
     if (!session?.authenticated || session.role !== 'librarian') return
     const account = staff.find((member) => normalizeEmail(member.email) === normalizeEmail(session.email) && member.role === 'Librarian')
     if (account && account.name !== session.name) {
@@ -136,7 +155,7 @@ export default function App() {
   const openBook = (book) => navigate('books', book)
   const logout = () => { setSession(null); setSection('dashboard'); setSelectedBook(null); setGlobalSearch(''); setSidebarOpen(false) }
   const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' ? 'Dashboard' : titles[section]
-  const activeLoans = transactions.filter((item) => item.status !== 'Returned')
+  const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const memberRecord = isMember ? borrowers.find((item) => item.email.toLowerCase() === session.email.toLowerCase()) : null
   const visibleLoans = isMember ? activeLoans.filter((item) => item.borrowerId === memberRecord?.id) : activeLoans
   const overdueCount = visibleLoans.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0).length
@@ -159,12 +178,12 @@ export default function App() {
       : section === 'librarian-desk'
         ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} />
         : section === 'books'
-          ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && item.status !== 'Returned').map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
+          ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status)).map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
               if (!session || !memberRecord) {
                 notify('You need an active member profile to borrow a book.')
                 return
               }
-              const alreadyBorrowed = transactions.some((item) => item.borrowerId === memberRecord.id && item.bookId === book.id && item.status !== 'Returned')
+              const alreadyBorrowed = transactions.some((item) => item.borrowerId === memberRecord.id && item.bookId === book.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
               if (alreadyBorrowed) {
                 notify('You already borrowed this book. You can only borrow each book once at a time.')
                 return
@@ -175,6 +194,7 @@ export default function App() {
                 return
               }
               const nextId = `TRX-${String(Date.now()).slice(-4)}`
+              const requestedAt = Date.now()
               const entry = {
                 id: nextId,
                 borrowerId: memberRecord.id,
@@ -183,13 +203,14 @@ export default function App() {
                 title: book.title,
                 issued: borrowDate,
                 due: returnDate,
-                status: 'Borrowed',
+                status: 'Pending',
+                requestedAt: new Date(requestedAt).toISOString(),
+                claimExpiresAt: requestedAt + 30 * 60 * 1000,
                 fine: 0,
               }
               setTransactions((current) => [entry, ...current])
               setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
-              notifyStaffActivity('borrowed', entry)
-              notify(`Borrowed “${book.title}” for ${memberRecord.name}`)
+              notify(`Borrow request sent for “${book.title}”. Wait for librarian confirmation.`)
             }} />
           : section === 'history'
             ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />

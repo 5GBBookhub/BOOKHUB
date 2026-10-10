@@ -7,7 +7,7 @@ export function MemberAccountPage({ session, borrowers, transactions }) {
   const borrower = borrowers.find((item) => item.email.toLowerCase() === session.email.toLowerCase())
   if (!borrower) return <section className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 text-[#173b63] shadow-[0_12px_30px_rgba(15,23,42,0.04)]"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-100 text-[#64748b]"><UserRound size={18} /></span><div><h2 className="text-xl font-bold text-[#173b63]">Library account not linked</h2><p className="mt-1 text-sm text-[#173b63]">We couldn't find a borrower profile for {session.email}. Ask library staff to connect your account so your borrowed books appear here.</p></div></div></section>
   const mine = transactions.filter((item) => item.borrowerId === borrower.id).sort((a, b) => b.issued.localeCompare(a.issued))
-  const active = mine.filter((item) => item.status !== 'Returned')
+  const active = mine.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const late = active.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0)
   return <>
     <div className="mb-6"><p className="text-sm text-[#173b63]">Your library profile and current borrowing activity.</p></div>
@@ -32,7 +32,7 @@ MemberAccountPage.MemberDashboard = function MemberDashboard({ session, borrower
   if (!borrower) return null
 
   const mine = transactions.filter((item) => item.borrowerId === borrower.id).sort((a, b) => b.issued.localeCompare(a.issued))
-  const active = mine.filter((item) => item.status !== 'Returned')
+  const active = mine.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const overdue = active.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0)
   const dueSoon = active.filter((item) => item.status === 'Borrowed' && daysLate(item.due) <= 3 && daysLate(item.due) >= 0).length
   const recent = mine.slice(0, 4)
