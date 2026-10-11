@@ -205,7 +205,7 @@ export default function App() {
                 due: returnDate,
                 status: 'Pending',
                 requestedAt: new Date(requestedAt).toISOString(),
-                claimExpiresAt: requestedAt + 30 * 60 * 1000,
+                claimExpiresAt: requestedAt + 60 * 60 * 1000,
                 fine: 0,
               }
               setTransactions((current) => [entry, ...current])

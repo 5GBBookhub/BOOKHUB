@@ -119,6 +119,8 @@ function BorrowDateModal({ book, onClose, onSubmit }) {
             />
           </label>
 
+          <p className="text-xs italic text-red-600">Note: You have a 1 hour grace period to claim the book after requesting it.</p>
+
           <div className="mt-2 flex items-center justify-end gap-3 border-t border-[#e2e8f0] pt-4">
             <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 py-2 text-sm font-semibold text-[#173b63] transition hover:border-[#94a3b8] hover:bg-[#f8fafc]" onClick={onClose}>Cancel</button>
             <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#173b63] px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#173b63]">Confirm borrow</button>
