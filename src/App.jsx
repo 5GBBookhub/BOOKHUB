@@ -22,6 +22,7 @@ import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 import { MemberSidebar } from './components/MemberSidebar.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
+import { useSupabaseState } from './lib/useSupabaseState.js'
 
 const titles = {
   dashboard: 'Good morning, Leona', 'librarian-desk': 'Librarian Desk', books: 'Book catalog', borrowers: 'Borrowers',
@@ -58,12 +59,12 @@ function useStoredState(key, fallback, sessionOnly = false) {
 }
 
 export default function App() {
-  const [books, setBooks] = useStoredState('bookhub.books', initialBooks)
-  const [borrowers, setBorrowers] = useStoredState('bookhub.borrowers', initialBorrowers)
-  const [transactions, setTransactions] = useStoredState('bookhub.transactions', initialTransactions)
-  const [activityNotifications, setActivityNotifications] = useStoredState('bookhub.activityNotifications', [])
-  const [staff, setStaff] = useStoredState('bookhub.staff', initialStaff)
-  const [settings, setSettings] = useStoredState('bookhub.settings', initialSettings)
+const [books, setBooks, booksReady] = useSupabaseState('books')
+const [borrowers, setBorrowers, borrowersReady] = useSupabaseState('borrowers')
+const [transactions, setTransactions, transactionsReady] = useSupabaseState('transactions')
+const [activityNotifications, setActivityNotifications, notificationsReady] = useSupabaseState('notifications')
+const [staff, setStaff, staffReady] = useSupabaseState('staff')
+const [settings, setSettings, settingsReady] = useSupabaseState('library_settings', initialSettings, { single: true })
   useEffect(() => {
     setStaff((current) => current.map((member) => {
       if (member.id === 'ST-001' && member.email === 'leona.dechavez@lib.ph') {
@@ -267,6 +268,10 @@ export default function App() {
       setSection('dashboard')
       setSelectedBook(null)
     }
+    if (![booksReady, borrowersReady, transactionsReady, notificationsReady, staffReady, settingsReady].every(Boolean)) {
+      return <div className="grid min-h-screen place-items-center text-sm text-[#64748b]">Loading BOOKHUB…</div>
+    }
+
     if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
   return (
     <div className="min-h-screen bg-[#f4f5f2]">
