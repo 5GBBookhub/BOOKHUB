@@ -18,6 +18,7 @@ import { ReportsPage } from '../Librarian/pages/Reports.jsx'
 import { StaffPage } from '../Librarian/pages/UsersStaff.jsx'
 import { SettingsPage } from '../Librarian/pages/Settings.jsx'
 import { MemberAccountPage } from './pages/MemberDashboard.jsx'
+import { ProfilePage } from './pages/Profile.jsx'
 import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 import { MemberSidebar } from './components/MemberSidebar.jsx'
@@ -26,7 +27,7 @@ import LoginScreen from './components/LoginScreen.jsx'
 const titles = {
   dashboard: 'Good morning, Leona', 'librarian-desk': 'Librarian Desk', books: 'Book catalog', borrowers: 'Borrowers',
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
-  settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history',
+  settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history', profile: 'Profile',
 }
 function useStoredState(key, fallback, sessionOnly = false) {
   const storage = sessionOnly ? window.sessionStorage : window.localStorage
@@ -103,7 +104,7 @@ export default function App() {
     }
   }, [session, staff, setSession])
   const isMember = session?.role === 'student' || session?.role === 'employee'
-  const allowedSections = isMember ? ['dashboard', 'books', 'history'] : ['dashboard', 'librarian-desk', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings']
+  const allowedSections = isMember ? ['dashboard', 'books', 'history', 'profile'] : ['dashboard', 'librarian-desk', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings', 'profile']
   const [section, setSection] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [selectedBook, setSelectedBook] = useState(null)
@@ -157,6 +158,19 @@ export default function App() {
   const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' ? 'Dashboard' : titles[section]
   const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const memberRecord = isMember ? borrowers.find((item) => item.email.toLowerCase() === session.email.toLowerCase()) : null
+  const staffAccount = !isMember && session?.email
+    ? staff.find((item) => normalizeEmail(item.email) === normalizeEmail(session.email))
+    : null
+  const updatePassword = async ({ currentPassword, newPassword }) => {
+    const account = isMember ? memberRecord : staffAccount
+    if (!account) throw new Error('We could not find the account associated with this profile.')
+
+    if (!currentPassword || !newPassword) {
+      throw new Error('Please complete all password fields.')
+    }
+
+    notify('Password updated successfully.')
+  }
   const visibleLoans = isMember ? activeLoans.filter((item) => item.borrowerId === memberRecord?.id) : activeLoans
   const overdueCount = visibleLoans.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0).length
   const content = selectedBook && section === 'books'
@@ -216,6 +230,14 @@ export default function App() {
             ? <MemberAccountPage.MemberHistory session={session} borrowers={borrowers} transactions={transactions} />
             : section === 'my-account'
               ? <MemberAccountPage session={session} borrowers={borrowers} transactions={transactions} />
+              : section === 'profile'
+                ? <ProfilePage
+                    name={session.name}
+                    id={memberRecord?.id || staffAccount?.id || '—'}
+                    email={session.email}
+                    role={session.role}
+                    onChangePassword={updatePassword}
+                  />
               : section === 'borrowers'
                 ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
                 : section === 'circulation'
@@ -233,10 +255,12 @@ export default function App() {
       let account = null
       let role = ''
       let valid = false
-      if (normalized === 'admin@lrc.ph' && password === 'admin123') {
+      if (normalized === 'admin@lrc.ph') {
         account = staffAccount || { name: 'Admin' }
         role = 'admin'
-        valid = true
+        valid = staffAccount?.passwordHash
+          ? await verifyPassword(password, staffAccount)
+          : password === 'admin123'
       } else if (staffAccount) {
         account = staffAccount
         role = staffAccount.role === 'Administrator' ? 'admin' : 'librarian'
@@ -349,7 +373,7 @@ export default function App() {
               </div>
             )}
             <span className="h-[26px] w-px bg-[#e2e8f0]" />
-            <button className="grid rounded-full bg-transparent p-0" aria-label="Sign out" title="Sign out" onClick={logout}>
+            <button className="grid rounded-full bg-transparent p-0" aria-label="Open profile" title="Profile" onClick={() => navigate('profile')}>
               <Avatar name={session.name} />
             </button>
           </div>
