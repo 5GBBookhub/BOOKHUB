@@ -66,21 +66,17 @@ export function useSupabaseState(table, fallback, { single = false } = {}) {
   const ref = useRef(single ? fallback : [])
   const readyRef = useRef(false)
 
-  useEffect(() => {
-    let cancelled = false
-    supabase.from(table).select('*').then(({ data, error }) => {
-      if (cancelled) return
-      if (error) { console.error(`Load ${table} failed:`, error.message); return }
-      const next = single
-        ? (data[0] ? fromRow(data[0]) : fallback)
-        : data.map(fromRow)
-      ref.current = next
-      readyRef.current = true
-      setValue(next)
-      setReady(true)
-    })
-    return () => { cancelled = true }
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.from(table).select('*')
+    if (error) { console.error(`Load ${table} failed:`, error.message); return }
+    const next = single ? (data[0] ? fromRow(data[0]) : fallback) : data.map(fromRow)
+    ref.current = next
+    readyRef.current = true
+    setValue(next)
+    setReady(true)
   }, [table]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load() }, [load])
 
   const set = useCallback((update) => {
     const prev = ref.current
@@ -91,5 +87,5 @@ export function useSupabaseState(table, fallback, { single = false } = {}) {
     if (readyRef.current) save(table, prev, next, single)
   }, [table, single])
 
-  return [value, set, ready]
+  return [value, set, ready, load]
 }

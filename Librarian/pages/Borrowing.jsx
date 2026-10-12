@@ -52,6 +52,7 @@ import {
   normalizeEmail,
   today,
 } from "../lib/helpers.js";
+import { supabase } from "../../src/lib/supabase.js";
 
 export function CirculationPage({
   books,
@@ -63,6 +64,7 @@ export function CirculationPage({
   onToast,
   onActivityNotification,
   onBookAvailable,
+  onReload,
   initialTab = "All transactions",
 }) {
   const [tab, setTab] = useState(initialTab);
@@ -86,36 +88,15 @@ export function CirculationPage({
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
-  const completeReturn = (transaction) => {
-    const late = daysLate(transaction.due);
-    const fine = late * Number(settings.fineRate);
-    const returnedTransaction = {
-      ...transaction,
-      status: "Returned",
-      returned: today(),
-      fine,
-    };
+  const completeReturn = async (transaction) => {
+    const { data: fine, error } = await supabase.rpc("return_book", { p_tx: transaction.id });
+    if (error) { onToast(error.message); setReturning(null); return; }
     const returnedBook = books.find((book) => book.id === transaction.bookId);
-    setTransactions((current) =>
-      current.map((item) =>
-        item.id === transaction.id ? returnedTransaction : item,
-      ),
-    );
-    setBooks((current) =>
-      current.map((item) =>
-        item.id === transaction.bookId
-          ? { ...item, available: Math.min(item.copies, item.available + 1) }
-          : item,
-      ),
-    );
-    onActivityNotification?.("returned", returnedTransaction);
+    await onReload();
+    onActivityNotification?.("returned", { ...transaction, status: "Returned", fine });
     if (returnedBook?.available === 0) onBookAvailable?.(returnedBook);
     setReturning(null);
-    onToast(
-      late
-        ? `Return recorded - ${money(fine)} fine due`
-        : "Return recorded successfully",
-    );
+    onToast(fine ? `Return recorded - ${money(fine)} fine due` : "Return recorded successfully");
   };
   return (
     <>
