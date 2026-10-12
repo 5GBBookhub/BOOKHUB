@@ -20,3 +20,21 @@ Administrators can create student accounts from **Borrowers**. Student emails ar
 - Students and employees: select the account type and create an account, or sign in with an existing account.
 
 Authentication is local to the browser and is for demonstration only. Use a trusted authentication service and server-enforced role permissions before deployment.
+
+## Setup
+
+1. Install dependencies:
+```
+   npm install
+```
+2. Create a file named `.env` in the project root (next to `package.json`):
+```
+   VITE_SUPABASE_URL=https://nclnscahjfhwaywelnvd.supabase.co
+   VITE_SUPABASE_ANON_KEY=sb_publishable_ihzpO0XNAmvdMNTnIMyt-w_ydEMSNi0
+```
+3. Start the app:
+```
+   npm run dev
+```
+
+`.env` is not pushed to GitHub, so every teammate must create their own.
