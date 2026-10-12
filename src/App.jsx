@@ -31,35 +31,6 @@ const titles = {
   circulation: 'Circulation desk', reports: 'Library reports', staff: 'Users & staff',
   settings: 'Settings', 'my-account': 'My account', history: 'Borrowing history', profile: 'Profile',
 }
-function useStoredState(key, fallback, sessionOnly = false) {
-  const storage = sessionOnly ? window.sessionStorage : window.localStorage
-  const [value, setValue] = useState(() => {
-    try {
-      const stored = storage.getItem(key)
-      return stored ? JSON.parse(stored) : fallback
-    } catch {
-      return fallback
-    }
-  })
-  useEffect(() => {
-    storage.setItem(key, JSON.stringify(value))
-  }, [key, storage, value])
-  useEffect(() => {
-    if (sessionOnly) return undefined
-    const syncFromOtherTab = (event) => {
-      if (event.key !== key) return
-      try {
-        setValue(event.newValue ? JSON.parse(event.newValue) : fallback)
-      } catch {
-        setValue(fallback)
-      }
-    }
-    window.addEventListener('storage', syncFromOtherTab)
-    return () => window.removeEventListener('storage', syncFromOtherTab)
-  }, [fallback, key, sessionOnly])
-  return [value, setValue]
-}
-
 export default function App() {
 const [books, setBooks, booksReady, reloadBooks] = useSupabaseState('books')
 const [borrowers, setBorrowers, borrowersReady] = useSupabaseState('borrowers')
@@ -79,7 +50,8 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
       return member
     }))
   }, [setStaff])
-  const [session, setSession] = useStoredState('bookhub.session', null, true)
+  // Start signed out on every page load; keep the login only in React state.
+  const [session, setSession] = useState(null)
   useEffect(() => {
     if (!booksReady || !transactionsReady) return undefined
     let first = true
@@ -101,6 +73,18 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
     }
   }, [session, staff, setSession])
   const isMember = session?.role === 'student' || session?.role === 'employee'
+  useEffect(() => {
+    if (!session?.authenticated || isMember) return undefined
+    const refreshCirculation = () => {
+      reloadLoans().catch((error) => console.warn('Refresh circulation data failed:', error))
+    }
+    const timer = window.setInterval(refreshCirculation, 10000)
+    window.addEventListener('focus', refreshCirculation)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshCirculation)
+    }
+  }, [isMember, session?.authenticated]) // eslint-disable-line react-hooks/exhaustive-deps
   const allowedSections = isMember ? ['dashboard', 'books', 'history', 'profile'] : ['dashboard', 'librarian-desk', 'books', 'borrowers', 'circulation', 'reports', 'staff', 'settings', 'profile']
   const [section, setSection] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
   const [activeNavItem, setActiveNavItem] = useState(() => session && isMember ? 'dashboard' : 'dashboard')
@@ -217,15 +201,30 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
                     onChangePassword={updatePassword}
                   />
               : section === 'borrowers'
-                ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
+                ? <BorrowersPage key={globalSearch} borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} initialQuery={globalSearch} />
                 : section === 'circulation'
-                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} onReload={reloadLoans} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
+                  ? <CirculationPage key={globalSearch} books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} onReload={reloadLoans} initialQuery={globalSearch} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
                   : section === 'reports'
                     ? <ReportsPage books={books} transactions={transactions} />
                     : section === 'staff'
                       ? <StaffPage staff={staff} setStaff={setStaff} onToast={notify} />
                       : <SettingsPage settings={settings} setSettings={setSettings} onToast={notify} />
-  const searchSubmit = (event) => { event.preventDefault(); navigate('books') }
+  const searchSubmit = (event) => {
+    event.preventDefault()
+    const query = globalSearch.trim().toLowerCase()
+    if (!query) return
+
+    const bookMatch = books.some((item) => `${item.title} ${item.author} ${item.id} ${item.isbn} ${item.category}`.toLowerCase().includes(query))
+    const borrowerMatch = borrowers.some((item) => `${item.name} ${item.id} ${item.email} ${item.course}`.toLowerCase().includes(query))
+    const transactionMatch = transactions.some((item) => `${item.borrower} ${item.title} ${item.id} ${item.status}`.toLowerCase().includes(query))
+    const staffMatch = staff.some((item) => `${item.name} ${item.id} ${item.email} ${item.role}`.toLowerCase().includes(query))
+
+    if (bookMatch || isMember) navigate('books')
+    else if (borrowerMatch) navigate('borrowers')
+    else if (transactionMatch) navigate('circulation')
+    else if (staffMatch) navigate('staff')
+    else navigate('books')
+  }
     const signIn = async (_role, email, password) => {
       const normalized = normalizeEmail(email)
       const staffAccount = staff.find((item) => normalizeEmail(item.email) === normalized && item.status === 'Active')
@@ -297,9 +296,9 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
 
           <div className="flex items-center gap-4">
             <form className="hidden items-center gap-2 rounded-md border border-[#e2e8f0] bg-[#fbfbfa] px-2.5 py-1.5 text-[#64748b] md:flex md:w-[230px]" onSubmit={searchSubmit}>
-              <Search size={16} />
-              <input aria-label="Search books" placeholder="Search anything…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#173b63] placeholder:text-[#64748b] focus:outline-none" />
-              <kbd className="rounded border border-[#e2e8f0] bg-[#f8fafc] px-1.5 py-0.5 text-[8px] text-[#64748b]">⌘ K</kbd>
+                <Search size={16} />
+                <input aria-label="Search dashboard" placeholder="Search dashboard…" value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#173b63] placeholder:text-[#64748b] focus:outline-none" />
+                <kbd className="rounded border border-[#e2e8f0] bg-[#f8fafc] px-1.5 py-0.5 text-[8px] text-[#64748b]">⌘ K</kbd>
             </form>
             {isStaff ? (
               <div className="relative">

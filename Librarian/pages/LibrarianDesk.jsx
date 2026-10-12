@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Check, Mail, X } from 'lucide-react'
 import { CoverArt } from '../components/LibraryShared.jsx'
-import { daysLate, formatDate, today } from '../lib/helpers.js'
+import { daysLate, formatDate, money, today } from '../lib/helpers.js'
 import { supabase } from "../../src/lib/supabase.js";
 
 function Panel({ children, className = '' }) {
@@ -14,67 +14,119 @@ export default function LibrarianDesk({ books, borrowers, transactions, settings
   const [loanQuery, setLoanQuery] = useState('')
   const [selectedBorrower, setSelectedBorrower] = useState('')
   const [selectedBook, setSelectedBook] = useState('')
-  const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
+  const [busyAction, setBusyAction] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const activeLoans = transactions.filter((item) => ['Borrowed', 'Overdue'].includes(item.status))
   const overdue = activeLoans.filter((item) => item.status === 'Overdue' || daysLate(item.due) > 0)
   const pending = transactions.filter((item) => item.status === 'Pending')
   const matchedLoans = activeLoans.filter((item) => `${item.title} ${item.borrower} ${item.borrowerId} ${item.id}`.toLowerCase().includes(loanQuery.toLowerCase()))
   const filteredBorrowers = borrowers.filter((item) => `${item.name} ${item.id} ${item.email}`.toLowerCase().includes(memberQuery.toLowerCase()))
   const filteredBooks = books.filter((item) => item.available > 0 && `${item.title} ${item.author} ${item.isbn}`.toLowerCase().includes(bookQuery.toLowerCase()))
-  const dueDate = new Date(Date.now() + Number(settings.loanDays) * 86400000).toISOString().slice(0, 10)
+  const minimumDueDate = today()
+  const defaultDueDate = new Date(Date.now() + Number(settings.loanDays || 14) * 86400000).toISOString().slice(0, 10)
+  const selectedDueDate = dueDate || defaultDueDate
 
   const checkout = async () => {
     const borrower = borrowers.find((item) => item.id === selectedBorrower)
     const book = books.find((item) => item.id === selectedBook)
     if (!borrower || !book) return onToast('Select a member and an available book first.')
-    const { data: id, error } = await supabase.rpc('request_borrow', {
-      p_borrower: borrower.id, p_book: book.id, p_issued: today(), p_due: dueDate,
-    })
-    if (error) return onToast(error.message)
-    const { error: confirmError } = await supabase.rpc('confirm_borrow', { p_tx: id })
-    if (confirmError) return onToast(confirmError.message)
-    await onReload()
-    onActivityNotification?.('borrowed', { id, borrower: borrower.name, title: book.title })
-    setSelectedBorrower('')
-    setSelectedBook('')
-    onToast(`Checked out ${book.title} to ${borrower.name}.`)
+    if (busyAction) return
+    if (selectedDueDate < minimumDueDate) return onToast('Choose a valid due date.')
+    if (borrower.status !== 'Active') return onToast('This member account is not active.')
+    if (book.available <= 0) return onToast('This book is no longer available.')
+    const borrowerLoans = transactions.filter((item) => item.borrowerId === borrower.id && ['Borrowed', 'Overdue'].includes(item.status))
+    if (borrowerLoans.some((item) => item.bookId === book.id)) return onToast('This member already has this book checked out.')
+    if (borrowerLoans.length >= Number(settings.maxBooks || 3)) return onToast(`This member has reached the ${settings.maxBooks || 3}-book limit.`)
+
+    setBusyAction('checkout')
+    try {
+      const { data: id, error } = await supabase.rpc('staff_checkout', {
+        p_borrower: borrower.id, p_book: book.id, p_issued: today(), p_due: selectedDueDate,
+      })
+      if (error) throw error
+      const { error: confirmError } = await supabase.rpc('confirm_borrow', { p_tx: id })
+      if (confirmError) throw confirmError
+      await onReload()
+      onActivityNotification?.('borrowed', { id, borrower: borrower.name, title: book.title })
+      setSelectedBorrower('')
+      setSelectedBook('')
+      setMemberQuery('')
+      setBookQuery('')
+      setDueDate('')
+      onToast(`Checked out ${book.title} to ${borrower.name}.`)
+    } catch (error) {
+      await onReload()
+      onToast(error.message || 'Unable to check out this book.')
+    } finally {
+      setBusyAction('')
+    }
   }
 
   const checkin = async (loan) => {
-    const { data: fine, error } = await supabase.rpc('return_book', { p_tx: loan.id })
-    if (error) return onToast(error.message)
-    const returnedBook = books.find((book) => book.id === loan.bookId)
-    await onReload()
-    onActivityNotification?.('returned', { ...loan, status: 'Returned', fine })
-    if (returnedBook?.available === 0) onBookAvailable?.(returnedBook)
-    onToast(`Checked in ${loan.title}.`)
+    if (busyAction) return
+    if (!['Borrowed', 'Overdue'].includes(loan.status)) return onToast('Only active loans can be checked in.')
+    setBusyAction(`checkin:${loan.id}`)
+    try {
+      const { data: fine, error } = await supabase.rpc('return_book', { p_tx: loan.id })
+      if (error) throw error
+      const returnedBook = books.find((book) => book.id === loan.bookId)
+      await onReload()
+      onActivityNotification?.('returned', { ...loan, status: 'Returned', fine })
+      if (returnedBook?.available === 0) onBookAvailable?.(returnedBook)
+      onToast(`Checked in ${loan.title}.`)
+    } catch (error) {
+      onToast(error.message || 'Unable to check in this book.')
+    } finally {
+      setBusyAction('')
+    }
   }
 
   const rejectHold = async (request) => {
-    const { error } = await supabase.rpc('cancel_request', { p_tx: request.id })
-    if (error) return onToast(error.message)
-    await onReload()
-    onToast(`Hold request cancelled for ${request.borrower}.`)
+    if (busyAction) return
+    setBusyAction(`reject:${request.id}`)
+    try {
+      const { error } = await supabase.rpc('cancel_request', { p_tx: request.id })
+      if (error) throw error
+      await onReload()
+      onToast(`Hold request cancelled for ${request.borrower}.`)
+    } catch (error) {
+      onToast(error.message || 'Unable to cancel this hold request.')
+    } finally {
+      setBusyAction('')
+    }
   }
 
   const approveHold = async (request) => {
-    const { error } = await supabase.rpc('confirm_borrow', { p_tx: request.id })
-    if (error) {
+    if (busyAction) return
+    const book = books.find((item) => item.id === request.bookId)
+    const borrowerLoans = transactions.filter((item) => item.borrowerId === request.borrowerId && ['Borrowed', 'Overdue'].includes(item.status))
+    if (!book || book.available <= 0) return onToast('This book is no longer available.')
+    if (borrowerLoans.some((item) => item.bookId === request.bookId)) return onToast('This member already has this book checked out.')
+    if (borrowerLoans.length >= Number(settings.maxBooks || 3)) return onToast(`This member has reached the ${settings.maxBooks || 3}-book limit.`)
+
+    setBusyAction(`approve:${request.id}`)
+    try {
+      const { error } = await supabase.rpc('confirm_borrow', { p_tx: request.id })
+      if (error) throw error
+      await onReload()
+      onActivityNotification?.('borrowed', { ...request, status: 'Borrowed' })
+      onToast(`Hold request approved for ${request.borrower}.`)
+    } catch (error) {
       await supabase.rpc('expire_pending')
       await onReload()
-      return onToast(error.message)
+      onToast(error.message || 'Unable to approve this hold request.')
+    } finally {
+      setBusyAction('')
     }
-    await onReload()
-    onActivityNotification?.('borrowed', { ...request, status: 'Borrowed' })
-    onToast(`Hold request approved for ${request.borrower}.`)
   }
 
   return <div className="space-y-5">
     <div><h1 className="text-[24px] font-bold tracking-tight text-[#111827]">Librarian Desk</h1><p className="mt-1 text-sm text-[#64748b]">Circulation counter · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p></div>
-    <Panel className="grid grid-cols-2 overflow-hidden md:grid-cols-5">{[['Checked out today', transactions.filter((item) => item.issued === today()).length, 'text-[#111827]'], ['Checked in today', transactions.filter((item) => item.returned === today()).length, 'text-[#111827]'], ['Fines collected', `$${transactions.filter((item) => item.returned === today()).reduce((sum, item) => sum + Number(item.fine || 0), 0).toFixed(2)}`, 'text-[#111827]'], ['Pending requests', pending.length, 'text-amber-500'], ['Overdue on loan', overdue.length, 'text-red-500']].map(([label, value, color]) => <div key={label} className="border-b border-[#e3e7ed] px-4 py-3 last:border-0 md:border-b-0 md:border-r md:last:border-r-0"><span className="block text-xs text-[#64748b]">{label}</span><strong className={`mt-1 block font-mono text-lg ${color}`}>{value}</strong></div>)}</Panel>
+    <Panel className="grid grid-cols-2 overflow-hidden md:grid-cols-5">{[['Checked out today', transactions.filter((item) => item.issued === today()).length, 'text-[#111827]'], ['Checked in today', transactions.filter((item) => item.returned === today()).length, 'text-[#111827]'], ['Fines collected', money(transactions.filter((item) => item.returned === today()).reduce((sum, item) => sum + Number(item.fine || 0), 0)), 'text-[#111827]'], ['Pending requests', pending.length, 'text-amber-500'], ['Overdue on loan', overdue.length, 'text-red-500']].map(([label, value, color]) => <div key={label} className="border-b border-[#e3e7ed] px-4 py-3 last:border-0 md:border-b-0 md:border-r md:last:border-r-0"><span className="block text-xs text-[#64748b]">{label}</span><strong className={`mt-1 block font-mono text-lg ${color}`}>{value}</strong></div>)}</Panel>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(280px,.85fr)]">
-      <Panel className="overflow-hidden"><div className="flex items-center gap-3 border-b border-[#e3e7ed] px-5 py-4"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#173b63] text-white"><ArrowUpRight size={16} /></span><div><h2 className="text-sm font-bold text-[#111827]">Check out</h2><p className="text-xs text-[#64748b]">Lend a book to a member</p></div></div><div className="space-y-4 p-5"><label className="block text-xs font-medium text-[#64748b]">1. Member<input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Name, member ID, or email" className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm outline-none focus:border-[#315c99]" /></label>{memberQuery && <div className="max-h-24 overflow-y-auto rounded-lg border border-[#e3e7ed]">{filteredBorrowers.map((item) => <button key={item.id} type="button" onClick={() => { setSelectedBorrower(item.id); setMemberQuery(item.name) }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[#f1f5f9]">{item.name} <span className="text-[#94a3b8]">· {item.id}</span></button>)}</div>}<label className="block text-xs font-medium text-[#64748b]">2. Book<input value={bookQuery} onChange={(event) => setBookQuery(event.target.value)} placeholder="Title, author, or ISBN" className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm outline-none focus:border-[#315c99]" /></label>{bookQuery && <div className="max-h-24 overflow-y-auto rounded-lg border border-[#e3e7ed]">{filteredBooks.map((item) => <button key={item.id} type="button" onClick={() => { setSelectedBook(item.id); setBookQuery(item.title) }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[#f1f5f9]">{item.title} <span className="text-[#94a3b8]">· {item.available} available</span></button>)}</div>}<label className="block text-xs font-medium text-[#64748b]">3. Due date<input value={formatDate(dueDate)} readOnly className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#64748b] outline-none" /></label><button type="button" onClick={checkout} className="w-full rounded-xl bg-[#173b63] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#234f80]">Check out book</button></div></Panel>
+      <Panel className="overflow-hidden"><div className="flex items-center gap-3 border-b border-[#e3e7ed] px-5 py-4"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#173b63] text-white"><ArrowUpRight size={16} /></span><div><h2 className="text-sm font-bold text-[#111827]">Check out</h2><p className="text-xs text-[#64748b]">Lend a book to a member</p></div></div><div className="space-y-4 p-5"><label className="block text-xs font-medium text-[#64748b]">1. Member<input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Name, member ID, or email" className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm outline-none focus:border-[#315c99]" /></label>{memberQuery && <div className="max-h-24 overflow-y-auto rounded-lg border border-[#e3e7ed]">{filteredBorrowers.map((item) => <button key={item.id} type="button" onClick={() => { setSelectedBorrower(item.id); setMemberQuery(item.name) }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[#f1f5f9]">{item.name} <span className="text-[#94a3b8]">· {item.id}</span></button>)}</div>}<label className="block text-xs font-medium text-[#64748b]">2. Book<input value={bookQuery} onChange={(event) => setBookQuery(event.target.value)} placeholder="Title, author, or ISBN" className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm outline-none focus:border-[#315c99]" /></label>{bookQuery && <div className="max-h-24 overflow-y-auto rounded-lg border border-[#e3e7ed]">{filteredBooks.map((item) => <button key={item.id} type="button" onClick={() => { setSelectedBook(item.id); setBookQuery(item.title) }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[#f1f5f9]">{item.title} <span className="text-[#94a3b8]">· {item.available} available</span></button>)}</div>}<label className="block text-xs font-medium text-[#64748b]">3. Due date<input type="date" min={minimumDueDate} value={selectedDueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#64748b] outline-none focus:border-[#315c99]" /></label><button type="button" onClick={checkout} className="w-full rounded-xl bg-[#173b63] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#234f80]">Check out book</button></div></Panel>
       <Panel className="overflow-hidden"><div className="flex items-center gap-3 border-b border-[#e3e7ed] px-5 py-4"><span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-600 text-white"><ArrowDownLeft size={16} /></span><div><h2 className="text-sm font-bold text-[#111827]">Check in</h2><p className="text-xs text-[#64748b]">Receive returned books</p></div></div><div className="p-5"><label className="block text-xs font-medium text-[#64748b]">Find loan<input value={loanQuery} onChange={(event) => setLoanQuery(event.target.value)} placeholder="ISBN, title, member ID, or loan ID" className="mt-1.5 w-full rounded-xl border border-[#e3e7ed] bg-[#f8fafc] px-3 py-2.5 text-sm outline-none focus:border-[#315c99]" /></label><div className="mt-4 max-h-[330px] space-y-1 overflow-y-auto">{matchedLoans.map((item) => <div key={item.id} className="flex items-center gap-3 border-b border-[#e3e7ed] py-2.5 last:border-0"><div className="h-11 w-8 shrink-0 overflow-hidden rounded-lg"><div className="h-full w-full scale-[.2] origin-top-left" style={{ width: '500%', height: '500%' }}><CoverArt book={books.find((book) => book.id === item.bookId) || { ...item, category: 'Library', author: '', tone: 'cover-new' }} /></div></div><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-[#111827]">{item.title}</strong><span className="block truncate text-[10px] text-[#64748b]">{item.borrower} · {item.id}</span><span className={`text-[10px] ${daysLate(item.due) ? 'text-red-500' : 'text-[#64748b]'}`}>Due {formatDate(item.due)}{daysLate(item.due) ? ` · ${daysLate(item.due)}d late` : ''}</span></div><button type="button" onClick={() => checkin(item)} className="rounded-lg border border-[#e3e7ed] px-2.5 py-1.5 text-xs font-semibold text-[#173b63] hover:bg-[#f1f5f9]">Check in</button></div>)}</div></div></Panel>
-      <div className="space-y-5"><Panel className="overflow-hidden"><div className="flex items-center justify-between border-b border-[#e3e7ed] px-5 py-4"><h2 className="text-sm font-bold text-[#111827]">Hold requests</h2><span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-600">{pending.length}</span></div>{pending.length ? pending.map((item) => <div key={item.id} className="flex items-center gap-3 p-4"><div className="h-10 w-8 shrink-0 overflow-hidden rounded-lg"><div className="h-full w-full scale-[.2] origin-top-left" style={{ width: '500%', height: '500%' }}><CoverArt book={books.find((book) => book.id === item.bookId) || { ...item, category: 'Library', author: '', tone: 'cover-new' }} /></div></div><div className="min-w-0 flex-1"><strong className="block truncate text-xs">{item.title}</strong><span className="block text-[10px] text-[#64748b]">{item.borrower}</span><span className="block text-[10px] text-amber-600">Claim before {new Date(item.claimExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span></div><button type="button" onClick={() => rejectHold(item)} aria-label="Reject hold" className="rounded-lg border p-1.5"><X size={14} /></button><button type="button" onClick={() => approveHold(item)} aria-label="Approve hold" className="rounded-lg bg-[#173b63] p-1.5 text-white"><Check size={14} /></button></div>) : <p className="p-5 text-xs text-[#64748b]">No pending hold requests.</p>}</Panel><Panel className="overflow-hidden"><div className="border-b border-[#e3e7ed] px-5 py-4"><h2 className="text-sm font-bold text-[#111827]">Overdue ({overdue.length})</h2></div>{overdue.slice(0, 4).map((item) => <div key={item.id} className="flex items-center gap-3 border-b border-[#e3e7ed] p-4 last:border-0"><span className="grid h-10 w-10 place-items-center rounded-lg bg-red-50 text-center text-red-500"><strong className="block text-sm">{daysLate(item.due)}</strong><small className="text-[8px] uppercase">late</small></span><div className="min-w-0 flex-1"><strong className="block truncate text-xs">{item.borrower}</strong><span className="block truncate text-[10px] text-[#64748b]">{item.title} · ${Number(item.fine || daysLate(item.due) * settings.fineRate).toFixed(2)}</span></div><button type="button" onClick={() => onToast(`Reminder sent to ${item.borrower}.`)} className="inline-flex items-center gap-1 rounded-lg border border-[#e3e7ed] px-2 py-1.5 text-[10px] font-semibold"><Mail size={12} /> Remind</button></div>)}</Panel></div>
+      <div className="space-y-5"><Panel className="overflow-hidden"><div className="flex items-center justify-between border-b border-[#e3e7ed] px-5 py-4"><h2 className="text-sm font-bold text-[#111827]">Hold requests</h2><span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-600">{pending.length}</span></div>{pending.length ? pending.map((item) => <div key={item.id} className="flex items-center gap-3 p-4"><div className="h-10 w-8 shrink-0 overflow-hidden rounded-lg"><div className="h-full w-full scale-[.2] origin-top-left" style={{ width: '500%', height: '500%' }}><CoverArt book={books.find((book) => book.id === item.bookId) || { ...item, category: 'Library', author: '', tone: 'cover-new' }} /></div></div><div className="min-w-0 flex-1"><strong className="block truncate text-xs">{item.title}</strong><span className="block text-[10px] text-[#64748b]">{item.borrower}</span><span className="block text-[10px] text-amber-600">Claim before {new Date(item.claimExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span></div><button type="button" onClick={() => rejectHold(item)} aria-label="Reject hold" className="rounded-lg border p-1.5"><X size={14} /></button><button type="button" onClick={() => approveHold(item)} aria-label="Approve hold" className="rounded-lg bg-[#173b63] p-1.5 text-white"><Check size={14} /></button></div>) : <p className="p-5 text-xs text-[#64748b]">No pending hold requests.</p>}</Panel><Panel className="overflow-hidden"><div className="border-b border-[#e3e7ed] px-5 py-4"><h2 className="text-sm font-bold text-[#111827]">Overdue ({overdue.length})</h2></div>{overdue.slice(0, 4).map((item) => <div key={item.id} className="flex items-center gap-3 border-b border-[#e3e7ed] p-4 last:border-0"><span className="grid h-10 w-10 place-items-center rounded-lg bg-red-50 text-center text-red-500"><strong className="block text-sm">{daysLate(item.due)}</strong><small className="text-[8px] uppercase">late</small></span><div className="min-w-0 flex-1"><strong className="block truncate text-xs">{item.borrower}</strong><span className="block truncate text-[10px] text-[#64748b]">{item.title}       · {money(Number(item.fine || daysLate(item.due) * settings.fineRate))}</span></div><button type="button" onClick={() => onToast(`Reminder sent to ${item.borrower}.`)} className="inline-flex items-center gap-1 rounded-lg border border-[#e3e7ed] px-2 py-1.5 text-[10px] font-semibold"><Mail size={12} /> Remind</button></div>)}</Panel></div>
     </div>
   </div>
 }

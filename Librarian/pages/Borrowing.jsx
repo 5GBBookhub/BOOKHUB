@@ -65,15 +65,20 @@ export function CirculationPage({
   onActivityNotification,
   onBookAvailable,
   onReload,
+  initialQuery = "",
   initialTab = "All transactions",
 }) {
   const [tab, setTab] = useState(initialTab);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [returning, setReturning] = useState(null);
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
-  const loanRows = transactions.filter((item) => ["Pending", "Borrowed", "Overdue"].includes(item.status));
+  const rows = transactions.map((item) => ({
+    ...item,
+    borrower: item.borrower || borrowers.find((borrower) => borrower.id === item.borrowerId)?.name || "Unknown member",
+  }));
+  const loanRows = rows.filter((item) => ["Pending", "Borrowed", "Overdue"].includes(item.status));
   const overdueRows = loanRows.filter(
     (item) => item.status === "Overdue" || daysLate(item.due) > 0,
   );
@@ -81,8 +86,8 @@ export function CirculationPage({
     tab === "Overdue"
       ? overdueRows
       : tab === "Returns"
-        ? transactions.filter((item) => item.status === "Returned")
-        : transactions;
+        ? rows.filter((item) => item.status === "Returned")
+        : rows;
   const filtered = source.filter((item) =>
     `${item.borrower} ${item.title} ${item.id}`
       .toLowerCase()
