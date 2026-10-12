@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Check, Mail, X } from 'lucide-react'
 import { CoverArt } from '../components/LibraryShared.jsx'
 import { daysLate, formatDate, today } from '../lib/helpers.js'
+import { supabase } from "../../src/lib/supabase.js";
 
 function Panel({ children, className = '' }) {
   return <section className={`rounded-[18px] border border-[#e3e7ed] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.04)] ${className}`}>{children}</section>
 }
 
-export default function LibrarianDesk({ books, borrowers, transactions, settings, setBooks, setTransactions, onToast, onActivityNotification, onBookAvailable }) {
+export default function LibrarianDesk({ books, borrowers, transactions, settings, setBooks, setTransactions, onToast, onActivityNotification, onBookAvailable, onReload }) {
   const [memberQuery, setMemberQuery] = useState('')
   const [bookQuery, setBookQuery] = useState('')
   const [loanQuery, setLoanQuery] = useState('')
@@ -21,50 +22,48 @@ export default function LibrarianDesk({ books, borrowers, transactions, settings
   const filteredBooks = books.filter((item) => item.available > 0 && `${item.title} ${item.author} ${item.isbn}`.toLowerCase().includes(bookQuery.toLowerCase()))
   const dueDate = new Date(Date.now() + Number(settings.loanDays) * 86400000).toISOString().slice(0, 10)
 
-  const checkout = () => {
+  const checkout = async () => {
     const borrower = borrowers.find((item) => item.id === selectedBorrower)
     const book = books.find((item) => item.id === selectedBook)
     if (!borrower || !book) return onToast('Select a member and an available book first.')
-    const currentLoans = transactions.filter((item) => item.borrowerId === borrower.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status)).length
-    if (currentLoans >= Number(settings.maxBooks)) return onToast(`${borrower.name} has reached the ${settings.maxBooks}-book limit.`)
-    const transaction = { id: `TRX-${String(Date.now()).slice(-4)}`, borrowerId: borrower.id, borrower: borrower.name, bookId: book.id, title: book.title, issued: today(), due: dueDate, status: 'Borrowed', fine: 0 }
-    setTransactions((current) => [transaction, ...current])
-    setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: item.available - 1, borrowed: item.borrowed + 1 } : item))
-    onActivityNotification?.('borrowed', transaction)
+    const { data: id, error } = await supabase.rpc('request_borrow', {
+      p_borrower: borrower.id, p_book: book.id, p_issued: today(), p_due: dueDate,
+    })
+    if (error) return onToast(error.message)
+    const { error: confirmError } = await supabase.rpc('confirm_borrow', { p_tx: id })
+    if (confirmError) return onToast(confirmError.message)
+    await onReload()
+    onActivityNotification?.('borrowed', { id, borrower: borrower.name, title: book.title })
     setSelectedBorrower('')
     setSelectedBook('')
     onToast(`Checked out ${book.title} to ${borrower.name}.`)
   }
 
-  const checkin = (loan) => {
-    const returnedTransaction = { ...loan, status: 'Returned', returned: today(), fine: daysLate(loan.due) * Number(settings.fineRate) }
+  const checkin = async (loan) => {
+    const { data: fine, error } = await supabase.rpc('return_book', { p_tx: loan.id })
+    if (error) return onToast(error.message)
     const returnedBook = books.find((book) => book.id === loan.bookId)
-    setTransactions((current) => current.map((item) => item.id === loan.id ? returnedTransaction : item))
-    setBooks((current) => current.map((item) => item.id === loan.bookId ? { ...item, available: Math.min(item.copies, item.available + 1) } : item))
-    onActivityNotification?.('returned', returnedTransaction)
+    await onReload()
+    onActivityNotification?.('returned', { ...loan, status: 'Returned', fine })
     if (returnedBook?.available === 0) onBookAvailable?.(returnedBook)
     onToast(`Checked in ${loan.title}.`)
   }
 
-  const rejectHold = (request) => {
-    setTransactions((current) => current.map((item) => item.id === request.id
-      ? { ...item, status: 'Cancelled', cancelledAt: new Date().toISOString(), cancellationReason: 'Rejected by librarian' }
-      : item))
-    setBooks((current) => current.map((book) => book.id === request.bookId
-      ? { ...book, available: Math.min(book.copies, book.available + 1) }
-      : book))
+  const rejectHold = async (request) => {
+    const { error } = await supabase.rpc('cancel_request', { p_tx: request.id })
+    if (error) return onToast(error.message)
+    await onReload()
     onToast(`Hold request cancelled for ${request.borrower}.`)
   }
 
-  const approveHold = (request) => {
-    if (request.claimExpiresAt <= Date.now()) {
-      rejectHold(request)
-      onToast('This hold request has already expired.')
-      return
+  const approveHold = async (request) => {
+    const { error } = await supabase.rpc('confirm_borrow', { p_tx: request.id })
+    if (error) {
+      await supabase.rpc('expire_pending')
+      await onReload()
+      return onToast(error.message)
     }
-    setTransactions((current) => current.map((item) => item.id === request.id
-      ? { ...item, status: 'Borrowed', approvedAt: new Date().toISOString() }
-      : item))
+    await onReload()
     onActivityNotification?.('borrowed', { ...request, status: 'Borrowed' })
     onToast(`Hold request approved for ${request.borrower}.`)
   }

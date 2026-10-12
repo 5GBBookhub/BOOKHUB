@@ -22,6 +22,8 @@ import { AdminSidebar } from './components/AdminSidebar.jsx'
 import { LibrarianSidebar } from './components/LibrarianSidebar.jsx'
 import { MemberSidebar } from './components/MemberSidebar.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
+import { supabase } from './lib/supabase.js'
+import { useSupabaseState } from './lib/useSupabaseState.js'
 
 const titles = {
   dashboard: 'Good morning, Leona', 'librarian-desk': 'Librarian Desk', books: 'Book catalog', borrowers: 'Borrowers',
@@ -58,12 +60,13 @@ function useStoredState(key, fallback, sessionOnly = false) {
 }
 
 export default function App() {
-  const [books, setBooks] = useStoredState('bookhub.books', initialBooks)
-  const [borrowers, setBorrowers] = useStoredState('bookhub.borrowers', initialBorrowers)
-  const [transactions, setTransactions] = useStoredState('bookhub.transactions', initialTransactions)
-  const [activityNotifications, setActivityNotifications] = useStoredState('bookhub.activityNotifications', [])
-  const [staff, setStaff] = useStoredState('bookhub.staff', initialStaff)
-  const [settings, setSettings] = useStoredState('bookhub.settings', initialSettings)
+const [books, setBooks, booksReady, reloadBooks] = useSupabaseState('books')
+const [borrowers, setBorrowers, borrowersReady] = useSupabaseState('borrowers')
+const [transactions, setTransactions, transactionsReady, reloadTransactions] = useSupabaseState('transactions')
+const [activityNotifications, setActivityNotifications, notificationsReady] = useSupabaseState('notifications')
+const [staff, setStaff, staffReady] = useSupabaseState('staff')
+const [settings, setSettings, settingsReady] = useSupabaseState('library_settings', initialSettings, { single: true })
+const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
   useEffect(() => {
     setStaff((current) => current.map((member) => {
       if (member.id === 'ST-001' && member.email === 'leona.dechavez@lib.ph') {
@@ -77,24 +80,18 @@ export default function App() {
   }, [setStaff])
   const [session, setSession] = useStoredState('bookhub.session', null, true)
   useEffect(() => {
-    const expirePendingRequests = () => {
-      const now = Date.now()
-      setTransactions((current) => {
-        const expired = current.filter((item) => item.status === 'Pending' && item.claimExpiresAt <= now)
-        if (!expired.length) return current
-        setBooks((currentBooks) => currentBooks.map((book) => {
-          const released = expired.filter((item) => item.bookId === book.id).length
-          return released ? { ...book, available: Math.min(book.copies, book.available + released) } : book
-        }))
-        return current.map((item) => expired.some((expiredItem) => expiredItem.id === item.id)
-          ? { ...item, status: 'Cancelled', cancelledAt: new Date(now).toISOString(), cancellationReason: 'Claim grace period expired' }
-          : item)
-      })
+    if (!booksReady || !transactionsReady) return undefined
+    let first = true
+    const sync = async () => {
+      const { data: expired } = await supabase.rpc('expire_pending')
+      await supabase.rpc('mark_overdue')
+      if (first || expired > 0) await reloadLoans()
+      first = false
     }
-    expirePendingRequests()
-    const interval = window.setInterval(expirePendingRequests, 30_000)
+    sync()
+    const interval = window.setInterval(sync, 60_000)
     return () => window.clearInterval(interval)
-  }, [setBooks, setTransactions])
+  }, [booksReady, transactionsReady]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!session?.authenticated || session.role !== 'librarian') return
     const account = staff.find((member) => normalizeEmail(member.email) === normalizeEmail(session.email) && member.role === 'Librarian')
@@ -176,40 +173,21 @@ export default function App() {
           ? <MemberAccountPage.MemberDashboard session={session} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
           : <AdminDashboard books={books} borrowers={borrowers} transactions={transactions} onNavigate={navigate} />
       : section === 'librarian-desk'
-        ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} />
+        ? <LibrarianDesk books={books} borrowers={borrowers} transactions={transactions} settings={settings} setBooks={setBooks} setTransactions={setTransactions} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} onReload={reloadLoans} />
         : section === 'books'
-          ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status)).map((item) => item.bookId) : []} onBorrowBook={(book, borrowDate, returnDate) => {
+          ? <BooksPage key={globalSearch} books={books} setBooks={setBooks} onToast={notify} onOpenBook={openBook} initialQuery={globalSearch} readOnly={isMember} memberBorrowedBookIds={memberRecord ? transactions.filter((item) => item.borrowerId === memberRecord.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status)).map((item) => item.bookId) : []} onBorrowBook={async (book, borrowDate, returnDate) => {
               if (!session || !memberRecord) {
                 notify('You need an active member profile to borrow a book.')
                 return
               }
-              const alreadyBorrowed = transactions.some((item) => item.borrowerId === memberRecord.id && item.bookId === book.id && ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
-              if (alreadyBorrowed) {
-                notify('You already borrowed this book. You can only borrow each book once at a time.')
-                return
-              }
-              const available = books.find((item) => item.id === book.id)?.available ?? 0
-              if (available <= 0) {
-                notify('This book is currently unavailable.')
-                return
-              }
-              const nextId = `TRX-${String(Date.now()).slice(-4)}`
-              const requestedAt = Date.now()
-              const entry = {
-                id: nextId,
-                borrowerId: memberRecord.id,
-                borrower: memberRecord.name,
-                bookId: book.id,
-                title: book.title,
-                issued: borrowDate,
-                due: returnDate,
-                status: 'Pending',
-                requestedAt: new Date(requestedAt).toISOString(),
-                claimExpiresAt: requestedAt + 60 * 60 * 1000,
-                fine: 0,
-              }
-              setTransactions((current) => [entry, ...current])
-              setBooks((current) => current.map((item) => item.id === book.id ? { ...item, available: Math.max(0, item.available - 1), borrowed: item.borrowed + 1 } : item))
+              const { error } = await supabase.rpc('request_borrow', {
+                p_borrower: memberRecord.id,
+                p_book: book.id,
+                p_issued: borrowDate,
+                p_due: returnDate,
+              })
+              if (error) { notify(error.message); return }
+              await Promise.all([reloadBooks(), reloadTransactions()])
               notify(`Borrow request sent for “${book.title}”. Wait for librarian confirmation.`)
             }} />
           : section === 'history'
@@ -219,7 +197,7 @@ export default function App() {
               : section === 'borrowers'
                 ? <BorrowersPage borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} />
                 : section === 'circulation'
-                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
+                  ? <CirculationPage books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} onReload={reloadLoans} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
                   : section === 'reports'
                     ? <ReportsPage books={books} transactions={transactions} />
                     : section === 'staff'
@@ -267,6 +245,10 @@ export default function App() {
       setSection('dashboard')
       setSelectedBook(null)
     }
+    if (![booksReady, borrowersReady, transactionsReady, notificationsReady, staffReady, settingsReady].every(Boolean)) {
+      return <div className="grid min-h-screen place-items-center text-sm text-[#64748b]">Loading BOOKHUB…</div>
+    }
+
     if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
   return (
     <div className="min-h-screen bg-[#f4f5f2]">
