@@ -26,12 +26,13 @@ export function CoverArt({ book, compact = false }) {
 
   return (
     <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br ${toneMap[book.tone] || toneMap['cover-new']} ${compact ? 'h-[130px] p-3' : 'h-[220px] p-4'} text-white shadow-[0_18px_35px_rgba(104,74,55,0.18)]`} aria-label={`Cover artwork for ${book.title}${unavailable ? ', unavailable' : ''}`}>
-      {unavailable && <span className="absolute inset-0 z-0 bg-[#342a23]/25" />}
-      <span className={`relative z-10 block overflow-hidden font-semibold uppercase text-white/90 ${compact ? 'mb-2 max-h-[25px] text-[7px] leading-[11px] tracking-[0.16em]' : 'mb-3 text-[9px] tracking-[0.2em]'}`}>BOOKHUB LIBRARY · {book.category.toUpperCase()}</span>
-      <span className={`absolute z-10 flex items-center justify-center rounded-full border border-white/50 bg-[#342a23]/15 font-bold ${compact ? 'right-3 top-3 h-6 w-6 text-[8px]' : 'right-4 top-4 h-9 w-9 text-[11px]'}`}>BH</span>
-      <span className={`relative z-10 block overflow-hidden font-black leading-tight tracking-tight ${compact ? 'mt-2 max-h-[34px] text-[13px]' : 'mt-4 text-[clamp(1rem,2vw,1.65rem)]'}`}>{book.title}</span>
-      <span className={`relative z-10 block overflow-hidden text-white/90 ${compact ? 'mt-1 truncate text-[8px]' : 'mt-2 text-xs'}`}>{book.author}</span>
-      {unavailable && <span className="absolute bottom-3 right-3 z-10 rounded-full bg-[#f7f3ee]/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#684a37] shadow-sm">Unavailable</span>}
+      {book.coverUrl ? <img src={book.coverUrl} alt={`Cover of ${book.title}`} className="absolute inset-0 h-full w-full bg-white object-cover" /> : <>
+        <span className={`relative z-10 block overflow-hidden font-semibold uppercase text-white/90 ${compact ? 'mb-2 max-h-[25px] text-[7px] leading-[11px] tracking-[0.16em]' : 'mb-3 text-[9px] tracking-[0.2em]'}`}>BOOKHUB LIBRARY · {book.category.toUpperCase()}</span>
+        <span className={`absolute z-10 flex items-center justify-center rounded-full border border-white/50 bg-[#342a23]/15 font-bold ${compact ? 'right-3 top-3 h-6 w-6 text-[8px]' : 'right-4 top-4 h-9 w-9 text-[11px]'}`}>BH</span>
+        <span className={`relative z-10 block overflow-hidden font-black leading-tight tracking-tight ${compact ? 'mt-2 max-h-[34px] text-[13px]' : 'mt-4 text-[clamp(1rem,2vw,1.65rem)]'}`}>{book.title}</span>
+        <span className={`relative z-10 block overflow-hidden text-white/90 ${compact ? 'mt-1 truncate text-[8px]' : 'mt-2 text-xs'}`}>{book.author}</span>
+      </>}
+      {unavailable && <><span className="absolute inset-0 z-10 bg-[#342a23]/25" /><span className="absolute bottom-3 right-3 z-20 rounded-full bg-[#f7f3ee]/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#684a37] shadow-sm">Unavailable</span></>}
     </div>
   )
 }
