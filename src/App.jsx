@@ -292,7 +292,7 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
       return <div className="grid min-h-screen place-items-center text-sm text-[#64748b]">Loading BOOKHUB…</div>
     }
 
-    if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} />
+    if (!session?.authenticated) return <LoginScreen onLogin={signIn} onCreateAccount={createMemberAccount} existingEmails={[...borrowers.map((item) => item.email), ...staff.map((item) => item.email)]} />
   return (
     <div className="min-h-screen bg-[#f4f5f2]">
       {session.role === 'admin'

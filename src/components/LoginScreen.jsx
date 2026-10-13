@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { ArrowRight, BookOpen } from 'lucide-react'
-import { generateAccountEmail } from '../../Librarian/lib/helpers.js'
+import { generateUniqueAccountEmail } from '../../Librarian/lib/helpers.js'
 
 const detectRole = (email) => {
   const normalized = email.trim().toLowerCase()
@@ -11,7 +11,7 @@ const detectRole = (email) => {
   return 'student'
 }
 
-export default function LoginScreen({ onLogin, onCreateAccount }) {
+export default function LoginScreen({ onLogin, onCreateAccount, existingEmails = [] }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -20,7 +20,7 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
   const [course, setCourse] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const generatedEmail = generateAccountEmail(name, 'students.ph')
+  const generatedEmail = generateUniqueAccountEmail(name, 'students.ph', existingEmails)
 
   const submit = async (event) => {
     event.preventDefault()

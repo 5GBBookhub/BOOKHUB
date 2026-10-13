@@ -41,7 +41,7 @@ create table if not exists public.staff (
 
 create table if not exists public.transactions (
   id text primary key,
-  borrower_id text references public.borrowers(id),
+  borrower_id text references public.borrowers(id) on delete set null,
   borrower text,
   book_id text references public.books(id),
   title text,
@@ -55,6 +55,14 @@ create table if not exists public.transactions (
   cancelled_at timestamp with time zone,
   cancellation_reason text
 );
+
+-- Keep transaction history if a borrower profile is deleted. The borrower name
+-- is stored on each transaction, so the historical record remains readable.
+alter table public.transactions
+  drop constraint if exists transactions_borrower_id_fkey;
+alter table public.transactions
+  add constraint transactions_borrower_id_fkey
+  foreign key (borrower_id) references public.borrowers(id) on delete set null;
 
 create table if not exists public.notifications (
   id text primary key,

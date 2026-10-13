@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MoreHorizontal, Plus, Search, Trash2, X } from 'lucide-react'
-import { daysLate, formatDate, generateAccountEmail, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
+import { daysLate, formatDate, generateUniqueAccountEmail, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
 
 export function CoverArt({ book, compact = false }) {
   const toneMap = {
@@ -129,7 +129,7 @@ export function Modal({ title, subtitle, onClose, children, wide = false }) {
   )
 }
 
-export function RecordForm({ kind, record, onSave, onClose }) {
+export function RecordForm({ kind, record, onSave, onClose, existingEmails = [] }) {
   const [form, setForm] = useState(record || (kind === 'book'
     ? { title: '', author: '', category: 'Fiction', isbn: '', year: new Date().getFullYear(), copies: 1, available: 1, borrowed: 0, tone: 'cover-new' }
     : { id: '', name: '', email: '', course: '', joined: today(), status: 'Active', borrowed: 0, accountType: 'student', password: '' }))
@@ -153,7 +153,7 @@ export function RecordForm({ kind, record, onSave, onClose }) {
           else setForm((current) => ({
             ...current,
             name: value,
-            email: record ? current.email : generateAccountEmail(value, 'students.ph'),
+            email: record ? current.email : generateUniqueAccountEmail(value, 'students.ph', existingEmails),
           }))
         }} onBeforeInput={isBook ? (event) => {
           if (event.data && /[^\p{L}\s.,'!?&:;()\-]/u.test(event.data)) event.preventDefault()

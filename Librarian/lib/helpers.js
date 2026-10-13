@@ -10,6 +10,22 @@ export function generateAccountEmail(name, domain) {
   const firstInitial = parts[0].replace(/[^a-z0-9]/gi, '').charAt(0).toLowerCase()
   return surname && firstInitial ? `${surname}${firstInitial}@${domain}` : ''
 }
+export function generateUniqueAccountEmail(name, domain, existingEmails = []) {
+  const baseEmail = generateAccountEmail(name, domain)
+  if (!baseEmail) return ''
+
+  const usedEmails = new Set(existingEmails.map((email) => normalizeEmail(email)))
+  if (!usedEmails.has(baseEmail)) return baseEmail
+
+  const [localPart, emailDomain] = baseEmail.split('@')
+  let suffix = 2
+  let candidate = `${localPart}${suffix}@${emailDomain}`
+  while (usedEmails.has(candidate)) {
+    suffix += 1
+    candidate = `${localPart}${suffix}@${emailDomain}`
+  }
+  return candidate
+}
 export async function hashPassword(password, saltHex = null) {
   const salt = saltHex ? Uint8Array.from(saltHex.match(/.{2}/g), (byte) => parseInt(byte, 16)) : crypto.getRandomValues(new Uint8Array(16))
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])

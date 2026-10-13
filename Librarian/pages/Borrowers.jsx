@@ -51,7 +51,7 @@ import {
   money,
   normalizeEmail,
   today,
-  generateAccountEmail,
+  generateUniqueAccountEmail,
 } from "../lib/helpers.js";
 import { createLogin } from "../../src/lib/createLogin.js";
 
@@ -74,7 +74,7 @@ export function BorrowersPage({
   const save = async (record) => {
     const email = editing
       ? normalizeEmail(record.email)
-      : generateAccountEmail(record.name, "students.ph");
+      : generateUniqueAccountEmail(record.name, "students.ph", borrowers.map((item) => item.email));
     if (!email) {
       onToast("Enter a first name and surname to generate the student email.");
       return;
@@ -231,6 +231,7 @@ export function BorrowersPage({
         <RecordForm
           kind="borrower"
           record={editing}
+          existingEmails={borrowers.map((item) => item.email)}
           onSave={save}
           onClose={() => setModal(false)}
         />
