@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import { ArrowRight, BookOpen } from 'lucide-react'
+import { generateAccountEmail } from '../../Librarian/lib/helpers.js'
 
 const detectRole = (email) => {
   const normalized = email.trim().toLowerCase()
@@ -19,12 +20,14 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
   const [course, setCourse] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const generatedEmail = generateAccountEmail(name, 'students.ph')
 
   const submit = async (event) => {
     event.preventDefault()
     setError('')
 
-    if (!email.trim()) return setError('Please provide your email address.')
+    if (mode === 'signup' && !generatedEmail) return setError('Enter your first name and surname to generate your email.')
+    if (mode === 'login' && !email.trim()) return setError('Please provide your email address.')
     if (!password.trim()) return setError('Please provide your password.')
 
     if (mode === 'signup' && (!name.trim() || !course.trim())) {
@@ -35,7 +38,7 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
     try {
       const resolvedRole = mode === 'signup' ? 'student' : detectRole(email)
       if (mode === 'signup') {
-        await onCreateAccount({ role: resolvedRole, email, password, name, course })
+        await onCreateAccount({ role: resolvedRole, email: generatedEmail, password, name, course })
       } else {
         await onLogin(resolvedRole, email, password)
       }
@@ -47,8 +50,8 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#efe9e1] text-[#2f261f]">
-      <header className="flex items-center justify-between px-7 py-5 md:px-10 xl:px-12">
+    <main className="min-h-screen overflow-x-hidden bg-[#efe9e1] text-[#2f261f]">
+      <header className="flex items-center justify-between px-4 py-4 sm:px-7 sm:py-5 md:px-10 xl:px-12">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5d4033] text-white shadow-inner shadow-white/10">
             <BookOpen size={18} />
@@ -60,57 +63,61 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1600px] items-center gap-8 px-7 pb-10 pt-5 md:grid-cols-[1.05fr_0.95fr] md:px-10 xl:px-16 xl:pb-14">
-        <section className="flex min-h-[540px] flex-col justify-center px-2 py-6 md:px-4">
-          <div className="mb-6 text-[10px] font-medium uppercase tracking-[0.55em] text-[#2f261f]/60">
+      <div className="mx-auto grid min-w-0 max-w-[1600px] items-center gap-5 px-4 pb-8 pt-2 sm:gap-8 sm:px-7 sm:pb-10 sm:pt-5 md:grid-cols-[1.05fr_0.95fr] md:px-10 xl:px-16 xl:pb-14">
+        <section className="flex min-h-0 min-w-0 flex-col justify-center px-1 py-4 sm:px-2 sm:py-6 md:min-h-[540px] md:px-4">
+          <div className="mb-4 hidden text-[9px] font-medium uppercase tracking-[0.35em] text-[#2f261f]/60 sm:mb-6 sm:block sm:text-[10px] sm:tracking-[0.55em]">
             A little inspiration for your next chapter
           </div>
 
-          <h1 className="font-serif text-[4.2rem] leading-[0.8] tracking-[-0.08em] text-[#2f261f] md:text-[6.7rem]">
+          <h1 className="hidden font-serif text-[3.35rem] leading-[0.82] tracking-[-0.08em] text-[#2f261f] sm:block sm:text-[4.2rem] md:text-[6.7rem]">
             BORROW
             <span className="block">READ</span>
             <span className="block">RETURN</span>
           </h1>
 
-          <p className="mt-8 max-w-[420px] text-[1.05rem] leading-relaxed text-[#2f261f]/70">
+          <p className="mt-5 hidden max-w-[420px] text-[0.95rem] leading-relaxed text-[#2f261f]/70 sm:mt-8 sm:block sm:text-[1.05rem]">
             One thoughtful space for the books, people, and ideas that make our campus.
           </p>
 
-          <div className="mt-8 flex justify-center md:justify-start">
+          <div className="flex justify-center sm:mt-8 md:justify-start">
             <img
               src="/books-removebg-preview.png"
               alt="Stack of books illustration"
-              className="h-[250px] w-auto max-w-[460px] object-contain opacity-90 md:h-[220px]"
+              className="h-[180px] w-auto max-w-full object-contain opacity-90 sm:h-[250px] md:h-[220px]"
             />
           </div>
 
-          <div className="mt-8 text-[10px] font-medium uppercase tracking-[0.5em] text-[#2f261f]/60">
+          <div className="mt-3 text-center text-[9px] font-medium uppercase tracking-[0.3em] text-[#2f261f]/60 sm:mt-8 sm:text-left sm:text-[10px] sm:tracking-[0.5em]">
             Knowledge in motion · est. 2026
           </div>
         </section>
 
-        <section className="flex justify-center py-4 md:py-0">
-          <div className="w-full max-w-[500px] rounded-[28px] bg-[#f7f3ee]/90 p-5 shadow-[0_22px_55px_rgba(71,49,38,0.07)] ring-1 ring-[#d8cdc3] backdrop-blur-sm sm:p-7">
-            <div className="mb-5 text-[10px] font-medium uppercase tracking-[0.42em] text-[#2f261f]/60">
+        <section className="flex min-w-0 justify-center py-2 sm:py-4 md:py-0">
+          <div className="min-w-0 w-full max-w-[500px] rounded-2xl bg-[#f7f3ee]/90 p-4 shadow-[0_22px_55px_rgba(71,49,38,0.07)] ring-1 ring-[#d8cdc3] backdrop-blur-sm sm:rounded-[28px] sm:p-7">
+            <div className="mb-4 text-[9px] font-medium uppercase tracking-[0.32em] text-[#2f261f]/60 sm:mb-5 sm:text-[10px] sm:tracking-[0.42em]">
               BookHub account
             </div>
 
-            <h2 className="text-[2.2rem] font-bold leading-none tracking-[-0.05em] text-[#2f261f]">
+            <h2 className="text-[1.85rem] font-bold leading-none tracking-[-0.05em] text-[#2f261f] sm:text-[2.2rem]">
               {mode === 'signup' ? 'Create your account.' : 'Welcome back.'}
             </h2>
 
-            <p className="mt-3 text-[1.03rem] leading-relaxed text-[#2f261f]/65">
+            <p className="mt-3 text-[0.94rem] leading-relaxed text-[#2f261f]/65 sm:text-[1.03rem]">
               Sign in or create an account to explore the library.
             </p>
 
-            <form className="mt-7 space-y-4" onSubmit={submit}>
+            <form className="mt-5 space-y-4 sm:mt-7" onSubmit={submit}>
               {mode === 'signup' && (
                 <>
                   <label className="block text-[0.85rem] font-medium text-[#2f261f]/75">
                     Full name
                     <input
                       value={name}
-                      onChange={(event) => setName(event.target.value)}
+                      onChange={(event) => setName(event.target.value.replace(/[^\p{L}\s.'-]/gu, ''))}
+                      onBeforeInput={(event) => { if (event.data && /[^\p{L}\s.'-]/u.test(event.data)) event.preventDefault() }}
+                      pattern="[A-Za-zÀ-ÿ\s.'-]+"
+                      title="Use letters, spaces, apostrophes, and hyphens only."
+                      required
                       placeholder="Your full name"
                       className="mt-2 block w-full rounded-xl border border-[#d5d0ca] bg-[#f7f3ee] px-3.5 py-3 text-[0.96rem] text-[#2f261f] outline-none transition placeholder:text-[#2f261f]/40 focus:border-[#987255] focus:bg-[#fffaf5]"
                     />
@@ -120,7 +127,11 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
                     Course / program
                     <input
                       value={course}
-                      onChange={(event) => setCourse(event.target.value)}
+                      onChange={(event) => setCourse(event.target.value.replace(/[^\p{L}\s]/gu, ''))}
+                      onBeforeInput={(event) => { if (event.data && /[^\p{L}\s]/u.test(event.data)) event.preventDefault() }}
+                      pattern="[A-Za-zÀ-ÿ\s]+"
+                      title="Use letters and spaces only."
+                      required
                       placeholder="BS Information Technology"
                       className="mt-2 block w-full rounded-xl border border-[#d5d0ca] bg-[#f7f3ee] px-3.5 py-3 text-[0.96rem] text-[#2f261f] outline-none transition placeholder:text-[#2f261f]/40 focus:border-[#987255] focus:bg-[#fffaf5]"
                     />
@@ -132,11 +143,13 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
                 Email address
                 <input
                   type="email"
-                  value={email}
+                  value={mode === 'signup' ? generatedEmail : email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="admin@lrc.ph"
-                  className="mt-2 block w-full rounded-xl border border-[#d5d0ca] bg-[#f7f3ee] px-3.5 py-3 text-[0.96rem] text-[#2f261f] outline-none transition placeholder:text-[#2f261f]/40 focus:border-[#987255] focus:bg-[#fffaf5]"
+                  readOnly={mode === 'signup'}
+                  placeholder={mode === 'signup' ? 'Generated from your name' : 'Enter your email address'}
+                  className="mt-2 block w-full rounded-xl border border-[#d5d0ca] bg-[#f7f3ee] px-3.5 py-3 text-[0.96rem] text-[#2f261f] outline-none transition placeholder:text-[#2f261f]/40 focus:border-[#987255] focus:bg-[#fffaf5] read-only:cursor-not-allowed read-only:bg-[#f1eae2]"
                 />
+                {mode === 'signup' && <span className="mt-1 block text-xs font-normal text-[#2f261f]/55">Generated automatically from your full name.</span>}
               </label>
 
               <label className="block text-[0.85rem] font-medium text-[#2f261f]/75">
@@ -160,7 +173,7 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
               </label>
 
               {mode === 'login' && (
-                <div className="flex items-center justify-between gap-3 pt-1 text-[0.72rem] text-[#2f261f]/70">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-1 text-[0.72rem] text-[#2f261f]/70">
                   <label className="inline-flex items-center gap-2">
                     <input type="checkbox" className="h-3.5 w-3.5 rounded border-[#b9b1a8] accent-[#5d4033]" />
                     Keep me signed in
@@ -197,7 +210,7 @@ export default function LoginScreen({ onLogin, onCreateAccount }) {
               )}
             </form>
 
-            <div className="mt-8 flex items-center justify-between border-t border-[#d8cdc3] pt-4 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-[#2f261f]/60">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-[#d8cdc3] pt-4 text-[0.62rem] font-medium uppercase tracking-[0.16em] text-[#2f261f]/60 sm:mt-8 sm:text-[0.68rem] sm:tracking-[0.2em]">
               <span>© 2026 BookHub</span>
               <span className="inline-flex items-center gap-2">
                 HELP DESK

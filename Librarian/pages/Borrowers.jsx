@@ -60,8 +60,9 @@ export function BorrowersPage({
   setBorrowers,
   transactions,
   onToast,
+  initialQuery = "",
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -95,7 +96,7 @@ export function BorrowersPage({
         accountType: editing?.accountType || "student",
         ...(editing ? {} : credentials),
       };
-      setBorrowers((current) =>
+      await setBorrowers((current) =>
         editing
           ? current.map((item) => (item.id === editing.id ? account : item))
           : [account, ...current],
@@ -107,8 +108,8 @@ export function BorrowersPage({
           ? "Borrower profile updated"
           : `Student account created: ${email}`,
       );
-    } catch {
-      onToast("Unable to secure the account password. Please try again.");
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Unable to save the borrower account. Please try again.");
     }
   };
   return (

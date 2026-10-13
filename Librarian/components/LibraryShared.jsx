@@ -25,13 +25,14 @@ export function CoverArt({ book, compact = false }) {
   const unavailable = book.available <= 0
 
   return (
-    <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br ${toneMap[book.tone] || toneMap['cover-new']} p-4 text-white shadow-[0_18px_35px_rgba(104,74,55,0.18)] ${compact ? 'h-[130px]' : 'h-[220px]'}`} aria-label={`Cover artwork for ${book.title}${unavailable ? ', unavailable' : ''}`}>
-      {unavailable && <span className="absolute inset-0 z-0 bg-[#342a23]/25" />}
-      <span className="relative z-10 mb-3 block text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90"> BOOKHUB LIBRARY · {book.category.toUpperCase()}</span>
-      <span className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-[#342a23]/15 text-[11px] font-bold">BH</span>
-      <span className="relative z-10 mt-4 block text-[clamp(1rem,2vw,1.65rem)] font-black leading-tight tracking-tight">{book.title}</span>
-      <span className="relative z-10 mt-2 block text-xs text-white/90">{book.author}</span>
-      {unavailable && <span className="absolute bottom-3 right-3 z-10 rounded-full bg-[#f7f3ee]/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#684a37] shadow-sm">Unavailable</span>}
+    <div className={`relative overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br ${toneMap[book.tone] || toneMap['cover-new']} ${compact ? 'h-[130px] p-3' : 'h-[220px] p-4'} text-white shadow-[0_18px_35px_rgba(104,74,55,0.18)]`} aria-label={`Cover artwork for ${book.title}${unavailable ? ', unavailable' : ''}`}>
+      {book.coverUrl ? <img src={book.coverUrl} alt={`Cover of ${book.title}`} className="absolute inset-0 h-full w-full bg-white object-cover" /> : <>
+        <span className={`relative z-10 block overflow-hidden font-semibold uppercase text-white/90 ${compact ? 'mb-2 max-h-[25px] text-[7px] leading-[11px] tracking-[0.16em]' : 'mb-3 text-[9px] tracking-[0.2em]'}`}>BOOKHUB LIBRARY · {book.category.toUpperCase()}</span>
+        <span className={`absolute z-10 flex items-center justify-center rounded-full border border-white/50 bg-[#342a23]/15 font-bold ${compact ? 'right-3 top-3 h-6 w-6 text-[8px]' : 'right-4 top-4 h-9 w-9 text-[11px]'}`}>BH</span>
+        <span className={`relative z-10 block overflow-hidden font-black leading-tight tracking-tight ${compact ? 'mt-2 max-h-[34px] text-[13px]' : 'mt-4 text-[clamp(1rem,2vw,1.65rem)]'}`}>{book.title}</span>
+        <span className={`relative z-10 block overflow-hidden text-white/90 ${compact ? 'mt-1 truncate text-[8px]' : 'mt-2 text-xs'}`}>{book.author}</span>
+      </>}
+      {unavailable && <><span className="absolute inset-0 z-10 bg-[#342a23]/25" /><span className="absolute bottom-3 right-3 z-20 rounded-full bg-[#f7f3ee]/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#684a37] shadow-sm">Unavailable</span></>}
     </div>
   )
 }
@@ -51,7 +52,8 @@ export function StatusPill({ status }) {
 }
 
 export function Avatar({ name, size = '' }) {
-  const initials = name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+  const safeName = typeof name === 'string' && name.trim() ? name.trim() : 'Unknown member'
+  const initials = safeName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
   return <span className={`grid place-items-center rounded-full bg-[#94a3b8] text-[#173b63] font-bold ${size === 'small' ? 'h-[25px] w-[25px] text-[8px]' : 'h-[31px] w-[31px] text-[9px]'}`}>{initials}</span>
 }
 
@@ -72,44 +74,38 @@ export function ActivityChart() {
 }
 
 export function DonutChart({ transactions }) {
-  const counts = ['Borrowed', 'Returned', 'Overdue'].map((status) => transactions.filter((item) => item.status === status).length)
-  const total = counts.reduce((sum, value) => sum + value, 0) || 1
-  const circumference = 2 * Math.PI * 60
-  const segments = counts.map((count) => (count / total) * circumference)
-  const segmentColors = ['stroke-[#684a37]', 'stroke-[#c9b39f]', 'stroke-[#987255]']
+  const statuses = [
+    ['Borrowed', '#684a37', 'bg-[#684a37]'],
+    ['Returned', '#c9b39f', 'bg-[#c9b39f]'],
+    ['Overdue', '#d77c65', 'bg-[#d77c65]'],
+  ]
+  const counts = statuses.map(([status]) => transactions.filter((item) => item.status === status).length)
+  const total = counts.reduce((sum, value) => sum + value, 0)
+  const radius = 60
+  const circumference = 2 * Math.PI * radius
   let offset = 0
   return (
     <div className="mt-5 flex flex-col items-center gap-5 md:flex-row md:items-center md:justify-between">
-      <div className="relative grid h-[150px] w-[150px] place-items-center rounded-full">
-        <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 160 160" role="img" aria-label="Transaction distribution chart">
-          {segments.map((length, index) => {
+      <div className="relative grid h-[150px] w-[150px] shrink-0 place-items-center rounded-full">
+        <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 160 160" role="img" aria-label={`Transaction distribution: ${total} total transactions`}>
+          <circle cx="80" cy="80" r={radius} fill="none" stroke="#eee7df" strokeWidth="28" />
+          {total > 0 && counts.map((count, index) => {
+            const length = (count / total) * circumference
             const segmentOffset = offset
             offset += length
-            return (
-              <circle
-                key={index}
-                cx="80"
-                cy="80"
-                r="60"
-                fill="none"
-                strokeWidth="28"
-                strokeDasharray={`${length} ${circumference - length}`}
-                strokeDashoffset={-segmentOffset}
-                className={segmentColors[index]}
-              />
-            )
+            return <circle key={statuses[index][0]} cx="80" cy="80" r={radius} fill="none" stroke={statuses[index][1]} strokeWidth="28" strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-segmentOffset} strokeLinecap="butt" />
           })}
         </svg>
-        <div className="grid h-[86px] w-[86px] place-items-center rounded-full bg-[#f8fafc] text-center shadow-inner">
-          <strong className="text-xl font-bold text-[#173b63]">{transactions.length}</strong>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">borrowed</span>
+        <div className="relative z-10 grid h-[86px] w-[86px] place-items-center rounded-full bg-[#f8fafc] text-center shadow-inner">
+          <strong className="text-2xl font-bold leading-none text-[#173b63]">{total}</strong>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#64748b]">Total</span>
         </div>
       </div>
       <div className="w-full space-y-3">
-        {[['Borrowed', counts[0], 'bg-[#684a37]'], ['Returned', counts[1], 'bg-[#c9b39f]'], ['Overdue', counts[2], 'bg-[#d77c65]']].map(([label, count, color]) => (
+        {statuses.map(([label, , color], index) => (
           <div className="flex items-center justify-between gap-3 text-sm text-[#173b63]" key={label}>
             <div className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${color}`} />{label}</div>
-            <strong>{count}</strong>
+            <strong>{counts[index]}</strong>
           </div>
         ))}
       </div>
@@ -148,26 +144,32 @@ export function RecordForm({ kind, record, onSave, onClose }) {
   return (
     <Modal title={`${record ? 'Edit' : 'Add'} ${isBook ? 'book' : 'borrower'}`} subtitle={isBook ? 'Keep the catalog details up to date.' : 'Create a library member profile.'} onClose={onClose}>
       <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-        {!isBook && <label className="text-sm font-medium text-[#173b63]">Student ID<input required value={form.id} onChange={(event) => set('id', event.target.value)} placeholder="2025-0001" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>}
-        <label className="text-sm font-medium text-[#173b63] md:col-span-2">{isBook ? 'Book title' : 'Full name'}<input required value={isBook ? form.title : form.name} onChange={(event) => {
-          const value = event.target.value
+        {!isBook && <label className="text-sm font-medium text-[#173b63]">Student ID<input required pattern="\d{11}" title="Use 11 digits only, for example 20241009170." maxLength={11} inputMode="numeric" value={form.id} onChange={(event) => set('id', event.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="20241009170" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>}
+        <label className="text-sm font-medium text-[#173b63] md:col-span-2">{isBook ? 'Book title' : 'Full name'}<input required pattern={isBook ? "[A-Za-zÀ-ÿ\\s.,'!?&:;()\\-]+" : "[A-Za-zÀ-ÿ\\s.'\\-]+"} title={isBook ? 'Use letters, spaces, and basic punctuation only.' : 'Use letters, spaces, apostrophes, and hyphens only.'} value={isBook ? form.title : form.name} onChange={(event) => {
+          const value = isBook
+            ? event.target.value.replace(/[^\p{L}\s.,'!?&:;()\-]/gu, '')
+            : event.target.value.replace(/[^\p{L}\s.'\-]/gu, '')
           if (isBook) set('title', value)
           else setForm((current) => ({
             ...current,
             name: value,
             email: record ? current.email : generateAccountEmail(value, 'students.ph'),
           }))
+        }} onBeforeInput={isBook ? (event) => {
+          if (event.data && /[^\p{L}\s.,'!?&:;()\-]/u.test(event.data)) event.preventDefault()
+        } : (event) => {
+          if (event.data && /[^\p{L}\s.'\-]/u.test(event.data)) event.preventDefault()
         }} placeholder={isBook ? 'Enter book title' : 'Enter full name'} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
         {isBook ? <>
-          <label className="text-sm font-medium text-[#173b63]">Author<input required value={form.author} onChange={(event) => set('author', event.target.value)} placeholder="Author name" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+          <label className="text-sm font-medium text-[#173b63]">Author<input required pattern="[A-Za-zÀ-ÿ\\s.'\\-]+" title="Use letters, spaces, apostrophes, and hyphens only." value={form.author} onChange={(event) => set('author', event.target.value.replace(/[^\p{L}\s.'\-]/gu, ''))} onBeforeInput={(event) => { if (event.data && /[^\p{L}\s.'\-]/u.test(event.data)) event.preventDefault() }} placeholder="Author name" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Category<select value={form.category} onChange={(event) => set('category', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10">{['Fiction', 'Biography', 'History', 'Lifestyle', 'Mystery', 'Psychology', 'Self Development', 'Technology'].map((category) => <option key={category}>{category}</option>)}</select></label>
-          <label className="text-sm font-medium text-[#173b63]">ISBN<input value={form.isbn} onChange={(event) => set('isbn', event.target.value)} placeholder="9780000000000" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+          <label className="text-sm font-medium text-[#173b63]">ISBN<input required pattern="\d{11}" title="Use 11 numbers only." maxLength={11} inputMode="numeric" value={form.isbn} onChange={(event) => set('isbn', event.target.value.replace(/\D/g, '').slice(0, 11))} onBeforeInput={(event) => { if (event.data && /\D/u.test(event.data)) event.preventDefault() }} placeholder="97800000000" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Publication year<input type="number" min="1000" max="2099" value={form.year} onChange={(event) => set('year', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Total copies<input type="number" min="1" value={form.copies} onChange={(event) => { const copies = Number(event.target.value); setForm((current) => ({ ...current, copies, available: Math.min(current.available, copies) })) }} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           <label className="text-sm font-medium text-[#173b63]">Available copies<input type="number" min="0" max={form.copies} value={form.available} onChange={(event) => set('available', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
         </> : <>
           <label className="text-sm font-medium text-[#173b63]">Generated email<input type="email" required value={form.email} readOnly={!record} onChange={(event) => set('email', event.target.value)} placeholder="Surname + first initial" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10 read-only:cursor-not-allowed read-only:bg-[#f1eae2]" /></label>
-          <label className="text-sm font-medium text-[#173b63]">Course / program<input required value={form.course} onChange={(event) => set('course', event.target.value)} placeholder="Degree program" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
+          <label className="text-sm font-medium text-[#173b63]">Course / program<input required pattern="[A-Za-zÀ-ÿ\\s.'&(),\\-/]+" title="Use letters, spaces, and basic punctuation only." value={form.course} onChange={(event) => set('course', event.target.value.replace(/[^\p{L}\s.'&(),\/-]/gu, ''))} onBeforeInput={(event) => { if (event.data && /[^\p{L}\s.'&(),\/-]/u.test(event.data)) event.preventDefault() }} placeholder="Degree program" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /></label>
           {!record && <label className="text-sm font-medium text-[#173b63] md:col-span-2">Temporary password<input type="password" required minLength="8" autoComplete="new-password" value={form.password} onChange={(event) => set('password', event.target.value)} placeholder="At least 8 characters" className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10" /><span className="mt-1 block text-xs font-normal text-[#64748b]">Share this password with the student. It is stored as a hash.</span></label>}
           <label className="text-sm font-medium text-[#173b63]">Account status<select value={form.status} onChange={(event) => set('status', event.target.value)} className="mt-1 w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#173b63] outline-none transition focus:border-[#173b63] focus:bg-[#f8fafc] focus:ring-2 focus:ring-[#173b63]/10"><option>Active</option><option>On hold</option></select></label>
         </>}

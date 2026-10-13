@@ -27,14 +27,14 @@ Authentication is local to the browser and is for demonstration only. Use a trus
 ```
    npm install
 ```
-2. Create a file named `.env` in the project root (next to `package.json`):
+2. Create a file named `.env` in the project root (next to `package.json`) and fill in your real Supabase project values:
 ```
-   VITE_SUPABASE_URL=https://nclnscahjfhwaywelnvd.supabase.co
-   VITE_SUPABASE_ANON_KEY=sb_publishable_ihzpO0XNAmvdMNTnIMyt-w_ydEMSNi0
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 3. Start the app:
 ```
    npm run dev
 ```
 
-`.env` is not pushed to GitHub, so every teammate must create their own.
+`.env` is not pushed to GitHub, so every teammate must create their own. The app also keeps working in demo mode when the values are blank or unavailable.
