@@ -59,6 +59,7 @@ export function BorrowersPage({
   borrowers,
   setBorrowers,
   transactions,
+  setTransactions,
   onToast,
   initialQuery = "",
 }) {
@@ -241,12 +242,35 @@ export function BorrowersPage({
           title="Delete borrower?"
           message={`Remove ${deleting.name} (${deleting.id}) from the borrower list? Existing transaction history will be kept.`}
           onClose={() => setDeleting(null)}
-          onConfirm={() => {
-            setBorrowers((current) =>
-              current.filter((item) => item.id !== deleting.id),
-            );
-            setDeleting(null);
-            onToast("Borrower removed");
+          onConfirm={async () => {
+            let detachedHistory = false;
+            try {
+              await setTransactions((current) =>
+                current.map((item) => item.borrowerId === deleting.id
+                  ? { ...item, borrowerId: null }
+                  : item),
+              );
+              detachedHistory = true;
+              await setBorrowers((current) =>
+                current.filter((item) => item.id !== deleting.id),
+              );
+              setDeleting(null);
+              onToast("Borrower removed; transaction history was kept.");
+            } catch (error) {
+              if (detachedHistory) {
+                try {
+                  await setTransactions((current) =>
+                    current.map((item) => item.borrowerId === null && transactions.some((previous) => previous.id === item.id && previous.borrowerId === deleting.id)
+                      ? { ...item, borrowerId: deleting.id }
+                      : item),
+                  );
+                } catch {
+                  onToast("Borrower deletion failed, and transaction history could not be re-linked.");
+                  return;
+                }
+              }
+              onToast(error instanceof Error ? error.message : "Unable to delete this borrower. Please try again.");
+            }
           }}
         />
       )}

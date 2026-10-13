@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Download, FileBarChart2, Filter, LibraryBig, MoreHorizontal, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
-import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
+import { ActivityChart, Avatar, ConfirmDialog, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
 import { daysLate, formatDate, hashPassword, money, normalizeEmail, today } from '../lib/helpers.js'
 
 export function BookDetail({ book, onBack, onSaveBook, transactions, canEdit = true }) {
@@ -9,8 +9,7 @@ export function BookDetail({ book, onBack, onSaveBook, transactions, canEdit = t
   return <>
     <button className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#173b63] transition hover:text-[#173b63]" onClick={onBack}><ArrowLeft size={15} />Back to catalog</button>
     <section className="rounded-[22px] border border-[#e2e8f0] bg-[#f8fafc] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] md:p-6">
-      <div className="grid gap-5 md:grid-cols-[250px_1fr] md:items-start">
-        <div className="w-full max-w-[230px]"><CoverArt book={book} /></div>
+      <div className="grid gap-5 md:items-start">
         <div>
           <span className="inline-flex rounded-full bg-[#e2e8f0] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#173b63]">{book.category}</span>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-[#173b63]">{book.title}</h1>

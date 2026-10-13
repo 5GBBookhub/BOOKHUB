@@ -225,7 +225,7 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
                     onChangePassword={updatePassword}
                   />
               : section === 'borrowers'
-                ? <BorrowersPage key={globalSearch} borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} onToast={notify} initialQuery={globalSearch} />
+                ? <BorrowersPage key={globalSearch} borrowers={borrowers} setBorrowers={setBorrowers} transactions={transactions} setTransactions={setTransactions} onToast={notify} initialQuery={globalSearch} />
                 : section === 'circulation'
                   ? <CirculationPage key={globalSearch} books={books} setBooks={setBooks} borrowers={borrowers} transactions={transactions} setTransactions={setTransactions} settings={settings} onToast={notify} onActivityNotification={notifyStaffActivity} onBookAvailable={notifyMembersBookAvailable} onReload={reloadLoans} initialQuery={globalSearch} initialTab={activeNavItem === 'returns' ? 'Returns' : activeNavItem === 'overdue-books' ? 'Overdue' : 'All transactions'} />
                   : section === 'reports'
