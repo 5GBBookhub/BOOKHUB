@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, BookCopy, BookOpen, Bookmark, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Download, FileBarChart2, Filter, LibraryBig, MoreHorizontal, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, TrendingUp, UserRound, Users, X } from 'lucide-react'
 import { ActivityChart, Avatar, ConfirmDialog, CoverArt, DonutChart, IssueForm, Modal, RecordForm, StatusPill, TransactionTable } from '../components/LibraryShared.jsx'
-import { daysLate, formatDate, hashPassword, money, normalizeEmail, today, generateAccountEmail } from '../lib/helpers.js'
+import { daysLate, formatDate, money, normalizeEmail, today, generateAccountEmail } from '../lib/helpers.js'
+import { createLogin } from '../../src/lib/createLogin.js'
 
 export function StaffPage({ staff, setStaff, onToast }) {
   const [modal, setModal] = useState(false)
@@ -33,17 +34,17 @@ export function StaffPage({ staff, setStaff, onToast }) {
       setFormError('Set a password before creating this account.')
       return
     }
-    let credentials = {}
-    try {
-      credentials = form.password ? await hashPassword(form.password) : {}
-    } catch {
-      setFormError('Unable to secure the account password. Please try again.')
-      return
+    if (!editing) {
+      try {
+        await createLogin(email, form.password)
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Unable to create the login account. Please try again.')
+        return
+      }
     }
     const account = {
       id: editing?.id || `ST-${String(Date.now()).slice(-4)}`,
       name: form.name.trim(), email, role: form.role, status: editing?.status || 'Active',
-      ...(form.password ? credentials : { passwordHash: editing?.passwordHash, passwordSalt: editing?.passwordSalt }),
     }
     setStaff((current) => editing ? current.map((item) => item.id === editing.id ? account : item) : [account, ...current])
     setModal(false)
@@ -57,7 +58,7 @@ export function StaffPage({ staff, setStaff, onToast }) {
       <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-[#173b63]">Full name<input className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[#173b63] outline-none transition focus:border-sky-400 focus:bg-[#f8fafc]" required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, email: editing ? form.email : generateAccountEmail(event.target.value, 'lib.ph') })} placeholder="Staff member name" /></label>
       <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-[#173b63]">{editing ? 'Email address' : 'Generated email'}<input className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[#173b63] outline-none transition focus:border-sky-400 focus:bg-[#f8fafc] read-only:cursor-not-allowed read-only:bg-[#f1eae2]" type="email" required value={form.email} readOnly={!editing} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Surname + first initial@lib.ph" /></label>
       <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-[#173b63]">Role<select disabled={!editing} className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[#173b63] outline-none transition focus:border-sky-400 focus:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-70" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option>Librarian</option><option>Administrator</option></select></label>
-      <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-[#173b63]">{editing ? 'New password (optional)' : 'Password'}<input className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[#173b63] outline-none transition focus:border-sky-400 focus:bg-[#f8fafc]" type="password" autoComplete="new-password" minLength="8" required={!editing} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editing ? 'Leave blank to keep current password' : 'At least 8 characters'} /></label>
+      <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-[#173b63]">{editing ? 'New password (optional)' : 'Password'}<input className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[#173b63] outline-none transition focus:border-sky-400 focus:bg-[#f8fafc]" type="password" autoComplete="new-password" minLength="6" required={!editing} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editing ? 'Leave blank to keep current password' : 'At least 6 characters'} /></label>
       {formError && <p className="md:col-span-2 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert"><AlertCircle size={15} />{formError}</p>}
       <div className="md:col-span-2 mt-2 flex justify-end gap-2"><button type="button" className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-2.5 text-sm font-semibold text-[#173b63] hover:bg-[#f8fafc]" onClick={() => setModal(false)}>Cancel</button><button className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(14,116,144,0.22)] hover:bg-sky-800"><Check size={15} />Save account</button></div>
     </form></Modal>}

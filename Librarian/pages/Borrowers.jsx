@@ -48,12 +48,12 @@ import {
 import {
   daysLate,
   formatDate,
-  hashPassword,
   money,
   normalizeEmail,
   today,
   generateAccountEmail,
 } from "../lib/helpers.js";
+import { createLogin } from "../../src/lib/createLogin.js";
 
 export function BorrowersPage({
   borrowers,
@@ -88,13 +88,11 @@ export function BorrowersPage({
     }
     try {
       const { password, ...profile } = record;
-      const credentials =
-        !editing && password ? await hashPassword(password) : {};
+      if (!editing && password) await createLogin(email, password);
       const account = {
         ...profile,
         email,
         accountType: editing?.accountType || "student",
-        ...(editing ? {} : credentials),
       };
       await setBorrowers((current) =>
         editing
