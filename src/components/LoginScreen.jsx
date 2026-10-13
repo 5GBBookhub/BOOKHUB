@@ -11,8 +11,8 @@ const detectRole = (email) => {
 }
 
 export default function LoginScreen({ onLogin, onCreateAccount }) {
-  const [email, setEmail] = useState('admin@lrc.ph')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [mode, setMode] = useState('login')
   const [name, setName] = useState('')

@@ -61,26 +61,21 @@ function useStoredState(key, fallback, sessionOnly = false) {
 
 export default function App() {
 const [books, setBooks, booksReady, reloadBooks] = useSupabaseState('books')
-const [borrowers, setBorrowers, borrowersReady] = useSupabaseState('borrowers')
+const [borrowers, setBorrowers, borrowersReady, reloadBorrowers] = useSupabaseState('borrowers')
 const [transactions, setTransactions, transactionsReady, reloadTransactions] = useSupabaseState('transactions')
-const [activityNotifications, setActivityNotifications, notificationsReady] = useSupabaseState('notifications')
-const [staff, setStaff, staffReady] = useSupabaseState('staff')
-const [settings, setSettings, settingsReady] = useSupabaseState('library_settings', initialSettings, { single: true })
+const [activityNotifications, setActivityNotifications, notificationsReady, reloadNotifications] = useSupabaseState('notifications')
+const [staff, setStaff, staffReady, reloadStaff] = useSupabaseState('staff')
+const [settings, setSettings, settingsReady, reloadSettings] = useSupabaseState('library_settings', initialSettings, { single: true })
+const reloadAll = () => Promise.all([reloadBooks(), reloadBorrowers(), reloadTransactions(), reloadNotifications(), reloadStaff(), reloadSettings()])
 const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
-  useEffect(() => {
-    setStaff((current) => current.map((member) => {
-      if (member.id === 'ST-001' && member.email === 'leona.dechavez@lib.ph') {
-        return { ...member, email: 'admin@lrc.ph' }
-      }
-      if (member.id === 'ST-002' && member.email === 'carlo.bautista@lib.ph') {
-        return { ...member, name: 'Bench' }
-      }
-      return member
-    }))
-  }, [setStaff])
   const [session, setSession] = useStoredState('bookhub.session', null, true)
   useEffect(() => {
-    if (!booksReady || !transactionsReady) return undefined
+    supabase.auth.getSession().then(({ data }) => { if (!data.session) setSession(null) })
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') setSession(null) })
+    return () => sub.subscription.unsubscribe()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!session?.authenticated || !booksReady || !transactionsReady) return undefined
     let first = true
     const sync = async () => {
       const { data: expired } = await supabase.rpc('expire_pending')
@@ -91,7 +86,7 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
     sync()
     const interval = window.setInterval(sync, 60_000)
     return () => window.clearInterval(interval)
-  }, [booksReady, transactionsReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session?.authenticated, booksReady, transactionsReady]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!session?.authenticated || session.role !== 'librarian') return
     const account = staff.find((member) => normalizeEmail(member.email) === normalizeEmail(session.email) && member.role === 'Librarian')
@@ -150,7 +145,11 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
     )))
   }
   const openBook = (book) => navigate('books', book)
-  const logout = () => { setSession(null); setSection('dashboard'); setSelectedBook(null); setGlobalSearch(''); setSidebarOpen(false) }
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setSession(null); setSection('dashboard'); setSelectedBook(null); setGlobalSearch(''); setSidebarOpen(false)
+    await reloadAll()
+  }
   const headerTitle = selectedBook && section === 'books' ? 'Book details' : section === 'dashboard' ? 'Dashboard' : titles[section]
   const activeLoans = transactions.filter((item) => ['Pending', 'Borrowed', 'Overdue'].includes(item.status))
   const memberRecord = isMember ? borrowers.find((item) => item.email.toLowerCase() === session.email.toLowerCase()) : null
@@ -206,25 +205,17 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
   const searchSubmit = (event) => { event.preventDefault(); navigate('books') }
     const signIn = async (_role, email, password) => {
       const normalized = normalizeEmail(email)
-      const staffAccount = staff.find((item) => normalizeEmail(item.email) === normalized && item.status === 'Active')
-      const memberAccount = borrowers.find((item) => normalizeEmail(item.email) === normalized && item.status === 'Active')
-      let account = null
-      let role = ''
-      let valid = false
-      if (normalized === 'admin@lrc.ph' && password === 'admin123') {
-        account = staffAccount || { name: 'Admin' }
-        role = 'admin'
-        valid = true
-      } else if (staffAccount) {
-        account = staffAccount
-        role = staffAccount.role === 'Administrator' ? 'admin' : 'librarian'
-        valid = await verifyPassword(password, staffAccount)
-      } else if (memberAccount) {
-        account = memberAccount
-        role = memberAccount.accountType || 'student'
-        valid = await verifyPassword(password, memberAccount)
+      const { error } = await supabase.auth.signInWithPassword({ email: normalized, password })
+      if (error) throw new Error('Email or password is incorrect.')
+      const { data: staffRow } = await supabase.from('staff').select('*').eq('email', normalized).maybeSingle()
+      const { data: member } = staffRow ? { data: null } : await supabase.from('borrowers').select('*').eq('email', normalized).maybeSingle()
+      const account = staffRow || member
+      if (!account || account.status !== 'Active') {
+        await supabase.auth.signOut()
+        throw new Error('This account is not active or has no library profile.')
       }
-      if (!account || !valid) throw new Error('Email or password is incorrect.')
+      const role = staffRow ? (staffRow.role === 'Administrator' ? 'admin' : 'librarian') : (member.account_type || 'student')
+      await reloadAll()
       setSession({ authenticated: true, role, email: normalized, name: account.name || 'Library User' })
       setSection('dashboard')
       setSelectedBook(null)
@@ -232,16 +223,22 @@ const reloadLoans = () => Promise.all([reloadBooks(), reloadTransactions()])
     const createMemberAccount = async ({ role, email, password, name, course }) => {
       if (role !== 'student' && role !== 'employee') throw new Error('Only students and employees can create an account.')
       const normalized = normalizeEmail(email)
-      if (staff.some((item) => normalizeEmail(item.email) === normalized)) throw new Error('This email belongs to a staff account. Choose another email.')
-      const existing = borrowers.find((item) => normalizeEmail(item.email) === normalized)
-      if (existing?.passwordHash) throw new Error('An account already exists for this email. Please sign in.')
-      if (existing?.accountType && existing.accountType !== role) throw new Error('This borrower profile is registered under a different account type.')
-      const credentials = await hashPassword(password)
-      const account = existing
-        ? { ...existing, ...credentials, accountType: role }
-        : { id: `NU-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, name: name.trim(), email: normalized, course: course.trim(), joined: today(), status: 'Active', borrowed: 0, accountType: role, ...credentials }
-      setBorrowers((current) => existing ? current.map((item) => item.id === existing.id ? account : item) : [account, ...current])
-      setSession({ authenticated: true, role, email: normalized, name: account.name })
+      const { data, error } = await supabase.auth.signUp({ email: normalized, password })
+      if (error) throw new Error(error.message)
+      if (!data.session) throw new Error('Account created. Confirm your email, then sign in.')
+      const { data: existing } = await supabase.from('borrowers').select('*').eq('email', normalized).maybeSingle()
+      let account = existing
+      if (!existing) {
+        account = {
+          id: `NU-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+          name: name.trim(), email: normalized, course: course.trim(), joined: today(),
+          status: 'Active', borrowed: 0, account_type: role,
+        }
+        const { error: insertError } = await supabase.from('borrowers').insert(account)
+        if (insertError) { await supabase.auth.signOut(); throw new Error(insertError.message) }
+      }
+      await reloadAll()
+      setSession({ authenticated: true, role: account.account_type || role, email: normalized, name: account.name })
       setSection('dashboard')
       setSelectedBook(null)
     }
