@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 const COLUMNS = {
-  books: ['id','title','author','category','isbn','year','copies','available','borrowed','tone'],
+  books: ['id','title','author','category','isbn','year','copies','available','borrowed','tone','cover_url'],
   borrowers: ['id','name','email','course','joined','status','borrowed','account_type','password_hash','password_salt'],
   staff: ['id','name','email','role','status','password_hash','password_salt'],
   transactions: ['id','borrower_id','borrower','book_id','title','issued','due','returned','status','fine','requested_at','claim_expires_at','cancelled_at','cancellation_reason'],

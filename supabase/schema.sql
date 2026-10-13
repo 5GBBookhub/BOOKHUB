@@ -79,10 +79,32 @@ create table if not exists public.library_settings (
   session_timeout integer default 30
 );
 
+alter table public.books add column if not exists cover_url text;
 alter table public.borrowers add column if not exists password_hash text;
 alter table public.borrowers add column if not exists password_salt text;
 alter table public.staff add column if not exists password_hash text;
 alter table public.staff add column if not exists password_salt text;
+
+update public.books
+set cover_url = case title
+  when 'Deep Work' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/deep%20work.jpg'
+  when 'Ikigai' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/ikigai.jpg'
+  when 'Little Women' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/little%20women.jpg'
+  when 'Sapiens' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/sapiens.jpg'
+  when 'The Alchemist' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/the%20alchemist.jpg'
+  when 'The Song of Achilles' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/TheSongofAchilles.jpg'
+  when 'Thinking, Fast and Slow' then 'https://nclnscahjfhwaywelnvd.supabase.co/storage/v1/object/public/book_cover/thinking%2C%20fast%20and%20slow.jpg'
+end
+where cover_url is null
+  and title in (
+    'Deep Work',
+    'Ikigai',
+    'Little Women',
+    'Sapiens',
+    'The Alchemist',
+    'The Song of Achilles',
+    'Thinking, Fast and Slow'
+  );
 
 insert into public.library_settings (id, library_name, email, loan_days, max_books, fine_rate, renewals, due_reminders, overdue_alerts, new_arrivals, two_factor, session_timeout)
 values (1, 'BookHub Library', 'library@edu.ph', 14, 3, 5, 1, true, true, false, true, 30)
